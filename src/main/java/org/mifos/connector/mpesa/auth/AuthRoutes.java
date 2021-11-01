@@ -66,9 +66,9 @@ public class AuthRoutes extends RouteBuilder {
         from("direct:access-token-fetch")
                 .id("access-token-fetch")
                 .log(LoggingLevel.INFO, "Fetching access token")
-                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Authorization", simple("Basic " + createAuthHeader(clientKey, clientSecret)))
-                .setHeader("Content-Type", constant("application/x-www-form-urlencoded"))
+                .setHeader("Content-Type", constant("application/json"))
                 .removeHeader(Exchange.HTTP_PATH)
                 .toD(authUrl + "?grant_type=client_credentials");
 
