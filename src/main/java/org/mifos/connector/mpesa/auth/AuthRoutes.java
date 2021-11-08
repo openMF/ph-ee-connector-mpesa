@@ -37,6 +37,10 @@ public class AuthRoutes extends RouteBuilder {
     @Override
     public void configure() {
 
+        from("rest:GET:/auth")
+                .id("authentication")
+                .to("direct:get-access-token");
+
         /**
          * Error handling route
          */
@@ -65,12 +69,16 @@ public class AuthRoutes extends RouteBuilder {
          */
         from("direct:access-token-fetch")
                 .id("access-token-fetch")
+                .removeHeader("*")
                 .log(LoggingLevel.INFO, "Fetching access token")
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Authorization", simple("Basic " + createAuthHeader(clientKey, clientSecret)))
-                .setHeader("Content-Type", constant("application/json"))
                 .removeHeader(Exchange.HTTP_PATH)
-                .toD(authUrl + "?grant_type=client_credentials");
+                .process(exchange -> {
+                    String val = (String) exchange.getIn().getHeader("Authorization");
+                    logger.info(val);
+                })
+                .toD(authUrl + "&bridgeEndpoint=true");
 
         /**
          * Access Token check validity and return value
@@ -94,7 +102,7 @@ public class AuthRoutes extends RouteBuilder {
     }
 
     private String createAuthHeader(String key, String secret) {
-        byte[] credential = String.format("%s:%s", key, secret).getBytes(StandardCharsets.UTF_8);
+        byte[] credential = (key+":"+secret).getBytes(StandardCharsets.UTF_8);
         return Base64.getEncoder().encodeToString(credential);
     }
 
