@@ -27,7 +27,7 @@ public class BuyGoodsPaymentRequestDTO {
     private String password;
 
     @JsonProperty("Timestamp")
-    private Long timestamp;
+    private String timestamp;
 
     @JsonProperty("TransactionType")
     private String transactionType;
@@ -89,11 +89,11 @@ public class BuyGoodsPaymentRequestDTO {
         this.password = password;
     }
 
-    public Long getTimestamp() {
+    public String getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Long timestamp) {
+    public void setTimestamp(String timestamp) {
         this.timestamp = timestamp;
     }
 

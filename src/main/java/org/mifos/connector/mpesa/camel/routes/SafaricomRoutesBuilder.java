@@ -81,13 +81,18 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-base")
                 .log(LoggingLevel.INFO, "Starting buy goods flow")
                 .to("direct:get-access-token")
-                .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
+                .process(exchange -> {
+                    //accessTokenStore.setAccessToken("YWGqNgoUjBAuZrNf7iYAAhht9cxA");
+                    accessTokenStore.setExpiresOn(3599);
+                    exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken());
+
+                })
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-buy-goods");
 
         /**
          * Takes the access toke and payment request and forwards the requests to lipana API.
-         * [Timestamp], [Password] and [TransactionType] are set in runtime and request is forwarded to lipana endpoint.
+         * [Password] and [TransactionType] are set in runtime and request is forwarded to lipana endpoint.
          */
         from("direct:lipana-buy-goods")
                 .removeHeader("*")
@@ -98,12 +103,11 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
                             (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
 
-                    Long timestamp = getTimestamp();
+
                     String password = getPassword("" + buyGoodsPaymentRequestDTO.getBusinessShortCode(),
                             passKey,
-                            "" + timestamp);
+                            "" + buyGoodsPaymentRequestDTO.getTimestamp());
 
-                    buyGoodsPaymentRequestDTO.setTimestamp(timestamp);
                     buyGoodsPaymentRequestDTO.setPassword(password);
                     buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
 
@@ -131,13 +135,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
         String password = toBase64(data);
         logger.info("Password: "+password);
         return password;
-    }
-
-    /**
-     * returns the local epoch time
-     */
-    private Long getTimestamp(){
-        return LocalDate.now().toEpochDay();
     }
 
     /**
