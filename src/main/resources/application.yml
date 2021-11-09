@@ -16,7 +16,7 @@ zeebe:
 
 mpesa:
   auth:
-    host: https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials
+    host: https://sandbox.safaricom.co.ke/oauth/v1/generate
     client-key: 0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5
     client-secret: YzuGNoJxeub8ZC6d
   api:

@@ -2,11 +2,9 @@ package org.mifos.connector.mpesa.auth;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.mifos.connector.common.gsma.dto.AccessTokenDTO;
-import org.mifos.connector.common.gsma.dto.AuthErrorDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,28 +30,24 @@ public class AuthRoutes extends RouteBuilder {
     @Autowired
     private AccessTokenStore accessTokenStore;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     public void configure() {
 
-        from("rest:GET:/auth")
-                .id("authentication")
-                .to("direct:get-access-token");
-
-        /**
-         * Error handling route
+        /*
+          Error handling route
          */
         from("direct:access-token-error")
                 .id("access-token-error")
-                .unmarshal().json(JsonLibrary.Jackson, AuthErrorDTO.class)
+                //.unmarshal().json(JsonLibrary.Jackson, AuthErrorDTO.class)
                 .process(exchange -> {
-                    logger.error(exchange.getIn().getBody(AuthErrorDTO.class).getErrorMessage());
+                    logger.error(exchange.getIn().getBody(String.class));
                     // TODO: Improve Error Handling
                 });
 
-        /**
-         * Save Access Token to AccessTokenStore
+        /*
+          Save Access Token to AccessTokenStore
          */
         from("direct:access-token-save")
                 .id("access-token-save")
@@ -64,24 +58,21 @@ public class AuthRoutes extends RouteBuilder {
                     logger.info("Saved Access Token: " + accessTokenStore.getAccessToken());
                 });
 
-        /**
-         * Fetch Access Token from mpesa API
+        /*
+          Fetch Access Token from mpesa API
          */
         from("direct:access-token-fetch")
                 .id("access-token-fetch")
-                .removeHeader("*")
                 .log(LoggingLevel.INFO, "Fetching access token")
+                .removeHeader(Exchange.HTTP_PATH)
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Authorization", simple("Basic " + createAuthHeader(clientKey, clientSecret)))
-                .removeHeader(Exchange.HTTP_PATH)
-                .process(exchange -> {
-                    String val = (String) exchange.getIn().getHeader("Authorization");
-                    logger.info(val);
-                })
-                .toD(authUrl + "&bridgeEndpoint=true");
+                .setHeader(Exchange.HTTP_RAW_QUERY, constant("grant_type=client_credentials"))
+                .toD(authUrl + "?bridgeEndpoint=true" + "&" +
+                        "throwExceptionOnFailure=false");
 
-        /**
-         * Access Token check validity and return value
+        /*
+          Access Token check validity and return value
          */
         from("direct:get-access-token")
                 .id("get-access-token")
