@@ -39,6 +39,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Override
     public void configure() {
 
+        /*
+           Use this endpoint for receiving the callback form safaricom mpesa endpoint
+         */
         from("rest:POST:/buygoods/callback")
                 .id("buy-goods-callback")
                 .setBody(exchange -> {
