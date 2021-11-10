@@ -5,6 +5,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.json.JSONObject;
 import org.mifos.connector.mpesa.auth.AccessTokenStore;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.slf4j.Logger;
@@ -12,10 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import java.util.Base64;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.ACCESS_TOKEN;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.BUY_GOODS_REQUEST_BODY;
 import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPESA_BUY_GOODS_TRANSACTION_TYPE;
+import static org.mifos.connector.mpesa.utility.SafaricomUtils.getPassword;
 
 
 @Component
@@ -37,6 +38,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     @Override
     public void configure() {
+
+        from("rest:POST:/buygoods/callback")
+                .id("buy-goods-callback")
+                .setBody(exchange -> {
+                    String body = exchange.getIn().getBody(String.class);
+                    JSONObject object = new JSONObject(body);
+                    return object.toString();
+                });
 
         /*
           Rest endpoint to initiate payment for buy goods
@@ -77,9 +86,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .log(LoggingLevel.INFO, "Starting buy goods flow")
                 .to("direct:get-access-token")
                 .process(exchange -> {
-                    accessTokenStore.setExpiresOn(3599);
                     exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken());
-
                 })
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-buy-goods");
@@ -111,29 +118,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true");
-    }
-
-    /*
-     * Generated the password using the businessShortCode, passKey and timestamp
-     * @param businessShortCode
-     * @param passKey
-     * @param timestamp
-     * @return password
-     */
-    private String getPassword(String businessShortCode, String passKey, String timestamp) {
-        String data = businessShortCode + passKey + timestamp;
-        String password = toBase64(data);
-        logger.info("Password: "+password);
-        return password;
-    }
-
-    /*
-     * Converts the string data into base64 encode string
-     * @param data
-     * @return base64 of [data]
-     */
-    private String toBase64(String data) {
-        return Base64.getEncoder().encodeToString(data.getBytes());
+                .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false");
     }
 }
