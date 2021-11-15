@@ -5,6 +5,6 @@ public class CamelProperties {
     public CamelProperties() {}
 
     public static final String BUY_GOODS_REQUEST_BODY = "buyGoodsRequestBody";
-
+    public static final String BUY_GOODS_TRANSACTION_STATUS_BODY = "buyGoodsTransactionStatusBody";
     public static final String ACCESS_TOKEN = "accessToken";
 }

@@ -8,13 +8,14 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.json.JSONObject;
 import org.mifos.connector.mpesa.auth.AccessTokenStore;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
+import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.ACCESS_TOKEN;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.BUY_GOODS_REQUEST_BODY;
+
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPESA_BUY_GOODS_TRANSACTION_TYPE;
 import static org.mifos.connector.mpesa.utility.SafaricomUtils.getPassword;
 
@@ -28,6 +29,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Value("${mpesa.api.lipana}")
     private String buyGoodsBaseUrl;
 
+    @Value("${mpesa.api.transaction-status}")
+    private String transactionStatusBaseUrl;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -40,6 +44,23 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     public void configure() {
 
         /*
+         * Use this endpoint for getting the mpesa transaction status
+         * The request parameter is same as the safaricom standards
+         */
+        from("rest:POST:/buygoods/transactionstatus")
+                .id("buy-goods-transaction-status")
+                .process(exchange -> {
+                    String body = exchange.getIn().getBody(String.class);
+                    TransactionStatusRequestDTO transactionStatusRequestDTO = objectMapper.readValue(
+                            body, TransactionStatusRequestDTO.class);
+
+                    exchange.setProperty(BUY_GOODS_REQUEST_BODY, transactionStatusRequestDTO);
+                    logger.info(body);
+                })
+                .to("direct:lipana-transaction-status");
+
+
+        /*
            Use this endpoint for receiving the callback form safaricom mpesa endpoint
          */
         from("rest:POST:/buygoods/callback")
@@ -47,6 +68,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .setBody(exchange -> {
                     String body = exchange.getIn().getBody(String.class);
                     JSONObject object = new JSONObject(body);
+                    logger.info(body);
                     return object.toString();
                 });
 
@@ -122,5 +144,22 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false");
+
+        /*
+         * Takes the request for transaction status and forwards in to the lipana transaction status endpoint
+         */
+        from("direct:lipana-transaction-status")
+                .removeHeader("*")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("Content-Type", constant("application/json"))
+                .setHeader("Authorization", simple("Bearer ${exchangeProperty."+ACCESS_TOKEN+"}"))
+                .setBody(exchange -> {
+                    TransactionStatusRequestDTO transactionStatusRequestDTO =
+                            (TransactionStatusRequestDTO) exchange.getProperty(BUY_GOODS_TRANSACTION_STATUS_BODY);
+                    logger.info(transactionStatusRequestDTO.toString());
+                    return  transactionStatusRequestDTO;
+                })
+                .marshal().json(JsonLibrary.Jackson)
+                .toD(transactionStatusBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false");
     }
 }
