@@ -1,4 +1,4 @@
-package org.mifos.connector.mpesa.zeebe.worker;
+package org.mifos.connector.mpesa.flowcomponents.transaction;
 
 import org.springframework.stereotype.Component;
 
