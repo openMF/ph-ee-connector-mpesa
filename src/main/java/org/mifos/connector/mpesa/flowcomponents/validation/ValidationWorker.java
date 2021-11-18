@@ -1,4 +1,4 @@
-package org.mifos.connector.mpesa.zeebe.worker;
+package org.mifos.connector.mpesa.flowcomponents.validation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;

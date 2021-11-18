@@ -11,6 +11,7 @@ zeebe:
     max-execution-threads: 100
     number-of-workers: 5
     evenly-allocated-max-jobs: "#{${zeebe.client.max-execution-threads} / ${zeebe.client.number-of-workers}}"
+    ttl: 30000
   broker:
     contactpoint: "localhost:26500"
 
