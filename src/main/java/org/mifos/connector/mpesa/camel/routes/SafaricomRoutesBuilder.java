@@ -69,6 +69,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     String body = exchange.getIn().getBody(String.class);
                     JSONObject object = new JSONObject(body);
                     logger.info(body);
+                    // TODO IMPLEMENTATION
                     return object.toString();
                 });
 
