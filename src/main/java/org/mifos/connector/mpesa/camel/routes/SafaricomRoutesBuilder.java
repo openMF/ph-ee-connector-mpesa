@@ -32,10 +32,13 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     private String passKey;
 
     @Value("${mpesa.api.lipana}")
-    private String buyGoodsBaseUrl;
+    private String buyGoodsHost;
+
+    @Value("${mpesa.api.lipana}")
+    private String buyGoodsLipanaUrl;
 
     @Value("${mpesa.api.transaction-status}")
-    private String transactionStatusBaseUrl;
+    private String transactionStatusUrl;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -181,7 +184,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log(LoggingLevel.INFO, "MPESA API called, response: ${body}");;
 
         /*
@@ -199,6 +202,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(transactionStatusBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false");
+                .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false");
     }
 }
