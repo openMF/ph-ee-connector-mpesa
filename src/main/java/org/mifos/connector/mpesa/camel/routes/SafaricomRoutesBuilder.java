@@ -5,10 +5,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.json.JSONObject;
+import org.apache.camel.util.json.JsonObject;
+import org.mifos.connector.common.gsma.dto.RequestStateDTO;
 import org.mifos.connector.mpesa.auth.AccessTokenStore;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
+import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
+import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
+import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Component;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPESA_BUY_GOODS_TRANSACTION_TYPE;
 import static org.mifos.connector.mpesa.utility.SafaricomUtils.getPassword;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_FAILED;
 
 
 @Component
@@ -36,7 +41,13 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private CollectionResponseProcessor collectionResponseProcessor;
+
+    @Autowired
     private AccessTokenStore accessTokenStore;
+
+    @Autowired
+    private CorrelationIDStore correlationIDStore;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -54,7 +65,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     TransactionStatusRequestDTO transactionStatusRequestDTO = objectMapper.readValue(
                             body, TransactionStatusRequestDTO.class);
 
-                    exchange.setProperty(BUY_GOODS_REQUEST_BODY, transactionStatusRequestDTO);
+                    exchange.setProperty(BUY_GOODS_TRANSACTION_STATUS_BODY, transactionStatusRequestDTO);
                     logger.info(body);
                 })
                 .to("direct:lipana-transaction-status");
@@ -65,13 +76,20 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          */
         from("rest:POST:/buygoods/callback")
                 .id("buy-goods-callback")
-                .setBody(exchange -> {
-                    String body = exchange.getIn().getBody(String.class);
-                    JSONObject object = new JSONObject(body);
-                    logger.info(body);
-                    // TODO IMPLEMENTATION
-                    return object.toString();
-                });
+                .log(LoggingLevel.INFO, "Callback body ${body}")
+                .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
+                .process(exchange -> {
+                    JsonObject callback = exchange.getIn().getBody(JsonObject.class);
+                    String serverUUID = MpesaUtils.getTransactionId(callback);
+                    exchange.setProperty(TRANSACTION_ID, correlationIDStore.getClientCorrelation(serverUUID));
+                })
+                .choice()
+                .when(exchange -> exchange.getIn().getBody(RequestStateDTO.class).getStatus().equals("completed"))
+                .setProperty(TRANSACTION_FAILED, constant(false))
+                .otherwise()
+                .setProperty(TRANSACTION_FAILED, constant(true))
+                .end()
+                .process(collectionResponseProcessor);
 
         /*
           Rest endpoint to initiate payment for buy goods
@@ -115,7 +133,26 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken());
                 })
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
-                .to("direct:lipana-buy-goods");
+                .to("direct:lipana-buy-goods")
+                .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
+                .log(LoggingLevel.INFO, "Transaction API response: ${body}")
+                .to("direct:transaction-response-handler");
+
+        /**
+         * Route to handle async API responses
+         */
+        from("direct:transaction-response-handler")
+                .id("transaction-response-handler")
+                .choice()
+                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .log(LoggingLevel.INFO, "Collection request successful")
+                .otherwise()
+                .log(LoggingLevel.ERROR, "Collection request unsuccessful")
+                .process(exchange -> {
+                    exchange.setProperty(TRANSACTION_ID, exchange.getProperty(CORRELATION_ID));
+                })
+                .setProperty(TRANSACTION_FAILED, constant(true))
+                .process(collectionResponseProcessor);
 
         /*
          * Takes the access toke and payment request and forwards the requests to lipana API.
@@ -144,7 +181,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false");
+                .toD(buyGoodsBaseUrl+"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .log(LoggingLevel.INFO, "MPESA API called, response: ${body}");;
 
         /*
          * Takes the request for transaction status and forwards in to the lipana transaction status endpoint
