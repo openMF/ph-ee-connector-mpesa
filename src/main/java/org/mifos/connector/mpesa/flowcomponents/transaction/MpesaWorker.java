@@ -71,15 +71,6 @@ public class MpesaWorker {
                 .maxJobsActive(workerMaxJobs)
                 .open();
 
-        zeebeClient.newWorker()
-                .jobType("get-transaction-status")
-                .handler((client, job) -> {
-                    // TODO IMPLEMENTATION
-                })
-                .name("get-transaction-status")
-                .maxJobsActive(workerMaxJobs)
-                .open();
-
     }
 
 }
