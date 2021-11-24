@@ -40,6 +40,21 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Value("${mpesa.api.transaction-status}")
     private String transactionStatusUrl;
 
+    @Value("${mpesa.local.host}")
+    private String localhost;
+
+    @Value("${mpesa.local.queue-timeout-url}")
+    private String queueTimeoutEndpoint;
+
+    @Value("${mpesa.local.result-url}")
+    private String resultUrlEndpoint;
+
+    @Value("${mpesa.initiator.name}")
+    private String initiatorName;
+
+    @Value("${mpesa.initiator.security-credentials}")
+    private String securityCredentials;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -56,6 +71,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     @Override
     public void configure() {
+
+        from("rest:POST:/buygoods/queuetimeout/callback")
+                .id("queue-timeout-url")
+                .log("Queue time url body ${body}");
+
+        from("rest:POST:/buygoods/result/callback")
+                .id("result-url")
+                .log("Result url body ${body}");
 
         /*
          * Use this endpoint for getting the mpesa transaction status
@@ -84,7 +107,10 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .process(exchange -> {
                     JsonObject callback = exchange.getIn().getBody(JsonObject.class);
                     String serverUUID = MpesaUtils.getTransactionId(callback);
+                    correlationIDStore.addMapping(serverUUID,
+                            exchange.getProperty(CORRELATION_ID, String.class));
                     exchange.setProperty(TRANSACTION_ID, correlationIDStore.getClientCorrelation(serverUUID));
+                    exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
                 })
                 .choice()
                 .when(exchange -> exchange.getIn().getBody(RequestStateDTO.class).getStatus().equals("completed"))
@@ -196,8 +222,23 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .setHeader("Content-Type", constant("application/json"))
                 .setHeader("Authorization", simple("Bearer ${exchangeProperty."+ACCESS_TOKEN+"}"))
                 .setBody(exchange -> {
-                    TransactionStatusRequestDTO transactionStatusRequestDTO =
-                            (TransactionStatusRequestDTO) exchange.getProperty(BUY_GOODS_TRANSACTION_STATUS_BODY);
+                    TransactionStatusRequestDTO transactionStatusRequestDTO = new TransactionStatusRequestDTO();
+
+                    BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
+                            (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
+
+                    transactionStatusRequestDTO.setTransactionId(exchange.getProperty(SERVER_TRANSACTION_ID, String.class));
+                    transactionStatusRequestDTO.setOccasion("confirming transaction");
+                    transactionStatusRequestDTO.setRemarks("get transaction status");
+                    transactionStatusRequestDTO.setIdentifierType("4");
+                    transactionStatusRequestDTO.setPartyA(""+buyGoodsPaymentRequestDTO.getBusinessShortCode());
+                    transactionStatusRequestDTO.setCommandId("TransactionStatusQuery");
+                    transactionStatusRequestDTO.setQueueTimeOutUrl(localhost+queueTimeoutEndpoint);
+                    transactionStatusRequestDTO.setResultUrl(localhost+resultUrlEndpoint);
+                    transactionStatusRequestDTO.setInitiator(initiatorName);
+                    transactionStatusRequestDTO.setSecurityCredential(securityCredentials);
+
+
                     logger.info(transactionStatusRequestDTO.toString());
                     return  transactionStatusRequestDTO;
                 })

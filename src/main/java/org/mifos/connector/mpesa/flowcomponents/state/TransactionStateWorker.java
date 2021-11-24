@@ -50,13 +50,10 @@ public class TransactionStateWorker {
                     Map<String, Object> variables = job.getVariablesAsMap();
                     variables.put(TRANSFER_RETRY_COUNT, 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0));
 
-                    // TODO HOW TO GET [TransactionStatusRequestDTO] OBJECT?
-                    TransactionStatusRequestDTO requestDTO = new TransactionStatusRequestDTO();
 
                     Exchange exchange = new DefaultExchange(camelContext);
                     exchange.setProperty(CORRELATION_ID, variables.get("transactionId"));
                     exchange.setProperty(TRANSACTION_ID, variables.get("transactionId"));
-                    exchange.setProperty(BUY_GOODS_TRANSACTION_STATUS_BODY, requestDTO);
 
                     producerTemplate.send("direct:lipana-transaction-status", exchange);
 
