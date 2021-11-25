@@ -7,8 +7,9 @@ import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
 import org.mifos.connector.common.channel.dto.TransactionChannelRequestDTO;
+import org.mifos.connector.mpesa.camel.routes.SafaricomRoutesBuilder;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
-import org.mifos.connector.mpesa.utility.EntityMapper;
+import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,6 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.BUY_GOODS_R
 public class MpesaWorker {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    @Autowired
-    EntityMapper<TransactionChannelRequestDTO, BuyGoodsPaymentRequestDTO>
-            channelRequestDTOToBuyGoodsPaymentRequestDTOEntityMapper;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -54,8 +51,8 @@ public class MpesaWorker {
                     TransactionChannelRequestDTO channelRequest = objectMapper.readValue(
                             (String) variables.get("channelRequest"), TransactionChannelRequestDTO.class);
 
-                    BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
-                            channelRequestDTOToBuyGoodsPaymentRequestDTOEntityMapper.fromEntityToDomain(channelRequest);
+                    BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = SafaricomUtils.channelRequestConvertor(
+                            channelRequest);
 
 
                     Exchange exchange = new DefaultExchange(camelContext);
