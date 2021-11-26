@@ -12,7 +12,7 @@ import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
-import org.mifos.connector.mpesa.utility.MpesaUtils;
+import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,7 +106,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
                 .process(exchange -> {
                     JsonObject callback = exchange.getIn().getBody(JsonObject.class);
-                    String serverUUID = MpesaUtils.getTransactionId(callback);
+                    String serverUUID = SafaricomUtils.getTransactionId(callback);
                     correlationIDStore.addMapping(serverUUID,
                             exchange.getProperty(CORRELATION_ID, String.class));
                     exchange.setProperty(TRANSACTION_ID, correlationIDStore.getClientCorrelation(serverUUID));
