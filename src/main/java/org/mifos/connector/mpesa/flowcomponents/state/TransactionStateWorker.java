@@ -6,8 +6,11 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
+import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
 import org.mifos.connector.common.gsma.dto.GSMATransaction;
+import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
+import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,9 @@ public class TransactionStateWorker {
     @Autowired
     private ZeebeClient zeebeClient;
 
+    @Autowired
+    private SafaricomUtils safaricomUtils;
+
     @Value("${zeebe.client.evenly-allocated-max-jobs}")
     private int workerMaxJobs;
 
@@ -44,16 +50,21 @@ public class TransactionStateWorker {
     public void setupWorkers() {
 
         zeebeClient.newWorker()
-                .jobType("transactionState")
+                .jobType("get-transaction-status")
                 .handler((client, job) -> {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
                     Map<String, Object> variables = job.getVariablesAsMap();
                     variables.put(TRANSFER_RETRY_COUNT, 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0));
 
+                    TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
+                            (String) variables.get("channelRequest"), TransactionChannelCollectionRequestDTO .class);
+                    BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
+                            channelRequest);
 
                     Exchange exchange = new DefaultExchange(camelContext);
                     exchange.setProperty(CORRELATION_ID, variables.get("transactionId"));
                     exchange.setProperty(TRANSACTION_ID, variables.get("transactionId"));
+                    exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
 
                     producerTemplate.send("direct:lipana-transaction-status", exchange);
 
@@ -67,7 +78,7 @@ public class TransactionStateWorker {
                             .send()
                             .join();
                 })
-                .name("transactionState")
+                .name("get-transaction-status")
                 .maxJobsActive(workerMaxJobs)
                 .open();
 

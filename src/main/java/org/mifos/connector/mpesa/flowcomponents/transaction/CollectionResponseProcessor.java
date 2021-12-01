@@ -35,8 +35,11 @@ public class CollectionResponseProcessor implements Processor {
         Object hasTransferFailed = exchange.getProperty(TRANSACTION_FAILED);
 
         if (hasTransferFailed != null && (boolean)hasTransferFailed) {
+            String body = exchange.getIn().getBody(String.class);
             variables.put(TRANSACTION_FAILED, true);
-            variables.put(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
+            variables.put(ERROR_INFORMATION, body);
+            exchange.setProperty(TRANSACTION_FAILED, true);
+            exchange.setProperty(ERROR_INFORMATION, body);
         } else {
             variables.put(TRANSACTION_FAILED, false);
 

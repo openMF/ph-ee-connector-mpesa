@@ -28,10 +28,10 @@ import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_FAILED;
 @Component
 public class SafaricomRoutesBuilder extends RouteBuilder {
 
-    @Value("${mpesa.api.passKey}")
+    @Value("${mpesa.api.pass-key}")
     private String passKey;
 
-    @Value("${mpesa.api.lipana}")
+    @Value("${mpesa.api.host}")
     private String buyGoodsHost;
 
     @Value("${mpesa.api.lipana}")
@@ -74,11 +74,11 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
         from("rest:POST:/buygoods/queuetimeout/callback")
                 .id("queue-timeout-url")
-                .log("Queue time url body ${body}");
+                .log("Queue time url body ..\n..\n..\n..\n ${body}");
 
         from("rest:POST:/buygoods/result/callback")
                 .id("result-url")
-                .log("Result url body ${body}");
+                .log("Result url body ..\n..\n..\n..\n ${body}");
 
         /*
          * Use this endpoint for getting the mpesa transaction status
@@ -102,7 +102,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          */
         from("rest:POST:/buygoods/callback")
                 .id("buy-goods-callback")
-                .log(LoggingLevel.INFO, "Callback body ${body}")
+                .log(LoggingLevel.INFO, "Callback body \n\n..\n\n..\n\n.. ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
                 .process(exchange -> {
                     JsonObject callback = exchange.getIn().getBody(JsonObject.class);
@@ -178,7 +178,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .otherwise()
                 .log(LoggingLevel.ERROR, "Collection request unsuccessful")
                 .process(exchange -> {
-                    exchange.setProperty(TRANSACTION_ID, exchange.getProperty(CORRELATION_ID));
+                    Object correlationId = exchange.getProperty(CORRELATION_ID);
+                    exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
                 .setProperty(TRANSACTION_FAILED, constant(true))
                 .process(collectionResponseProcessor);
@@ -204,14 +205,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     buyGoodsPaymentRequestDTO.setPassword(password);
                     buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
 
-                    logger.info(buyGoodsPaymentRequestDTO.toString());
+                    logger.info("BUY GOODS BODY: \n\n..\n\n..\n\n.. " + buyGoodsPaymentRequestDTO.toString());
                     logger.info(accessTokenStore.getAccessToken());
 
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
-                .log(LoggingLevel.INFO, "MPESA API called, response: ${body}");;
+                .log(LoggingLevel.INFO, "MPESA API called, response: \n\n..\n\n..\n\n.. ${body}");;
 
         /*
          * Takes the request for transaction status and forwards in to the lipana transaction status endpoint
@@ -227,19 +228,21 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
                             (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
 
+                    logger.info("BUY GOODS REQUEST: \n\n..\n\n..\n\n.." + buyGoodsPaymentRequestDTO);
+
                     transactionStatusRequestDTO.setTransactionId(exchange.getProperty(SERVER_TRANSACTION_ID, String.class));
                     transactionStatusRequestDTO.setOccasion("confirming transaction");
                     transactionStatusRequestDTO.setRemarks("get transaction status");
                     transactionStatusRequestDTO.setIdentifierType("4");
                     transactionStatusRequestDTO.setPartyA(""+buyGoodsPaymentRequestDTO.getBusinessShortCode());
                     transactionStatusRequestDTO.setCommandId("TransactionStatusQuery");
-                    transactionStatusRequestDTO.setQueueTimeOutUrl(localhost+queueTimeoutEndpoint);
-                    transactionStatusRequestDTO.setResultUrl(localhost+resultUrlEndpoint);
+                    transactionStatusRequestDTO.setQueueTimeOutUrl("https://3ea9-103-85-119-3.ngrok.io"+queueTimeoutEndpoint);
+                    transactionStatusRequestDTO.setResultUrl("https://3ea9-103-85-119-3.ngrok.io"+resultUrlEndpoint);
                     transactionStatusRequestDTO.setInitiator(initiatorName);
                     transactionStatusRequestDTO.setSecurityCredential(securityCredentials);
 
 
-                    logger.info(transactionStatusRequestDTO.toString());
+                    logger.info("TRANSACTION STATUS REQUEST DTO \n\n..\n\n..\n\n.." + transactionStatusRequestDTO.toString());
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)

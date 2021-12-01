@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
 
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFORMATION;
+
 @Component
 public class AuthRoutes extends RouteBuilder {
 
@@ -42,8 +44,10 @@ public class AuthRoutes extends RouteBuilder {
                 .id("access-token-error")
                 //.unmarshal().json(JsonLibrary.Jackson, AuthErrorDTO.class)
                 .process(exchange -> {
-                    logger.error(exchange.getIn().getBody(String.class));
+                    String body = exchange.getIn().getBody(String.class);
+                    logger.error(body);
                     // TODO: Improve Error Handling
+                    exchange.setProperty(ERROR_INFORMATION, body);
                 });
 
         /*

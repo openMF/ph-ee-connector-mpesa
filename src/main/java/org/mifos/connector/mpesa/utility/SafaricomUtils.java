@@ -2,52 +2,65 @@ package org.mifos.connector.mpesa.utility;
 
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
 import org.mifos.connector.common.channel.dto.TransactionChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPESA_BUY_GOODS_TRANSACTION_TYPE;
 
+@Component
 public class SafaricomUtils {
 
     @Value("${mpesa.local.host}")
-    private static String localhost;
+    private String localhost;
 
-    @Value("${mpesa.local.host}")
-    private static String callbackEndpoint;
+    @Value("${mpesa.local.transaction-callback}")
+    private String callbackEndpoint;
 
-    @Value("${mpesa.api}")
-    private static String passKey;
+    @Value("${mpesa.api.pass-key}")
+    private String passKey;
 
-    public static BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelRequestDTO transactionChannelRequestDTO) {
+    @Value("${mpesa.business-short-code}")
+    private Long businessShortCode;
+
+    public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
-        String payee = transactionChannelRequestDTO.getPayee().getPartyIdInfo().getPartyIdentifier();
-        String payer = transactionChannelRequestDTO.getPayer().getPartyIdInfo().getPartyIdentifier();
-        String amount = transactionChannelRequestDTO.getAmount().getAmount();
-        Long timestamp = System.currentTimeMillis();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+
+
+        // parsing amount from USD 123
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().split(" ")[1]);
+        long timestamp = 123; //Long.parseLong(sdf.format(new Date()));
+        long payer = Long.parseLong(transactionChannelRequestDTO.getPayer()[0].getValue());
 
         buyGoodsPaymentRequestDTO.setTimestamp(""+timestamp);
-        buyGoodsPaymentRequestDTO.setCallBackURL(localhost+callbackEndpoint);
-        buyGoodsPaymentRequestDTO.setPartyA(Long.parseLong(payer));
-        buyGoodsPaymentRequestDTO.setPhoneNumber(Long.parseLong(payer));
-        buyGoodsPaymentRequestDTO.setPartyB(Long.parseLong(payee));
-        buyGoodsPaymentRequestDTO.setBusinessShortCode(Long.parseLong(payee));
-        buyGoodsPaymentRequestDTO.setAmount(Long.parseLong(amount));
+        buyGoodsPaymentRequestDTO.setCallBackURL("https://3ea9-103-85-119-3.ngrok.io" + callbackEndpoint);
+
+        buyGoodsPaymentRequestDTO.setPartyA(payer);
+        buyGoodsPaymentRequestDTO.setPhoneNumber(payer);
+
+        buyGoodsPaymentRequestDTO.setPartyB(businessShortCode);
+        buyGoodsPaymentRequestDTO.setBusinessShortCode(businessShortCode);
+
+        buyGoodsPaymentRequestDTO.setAmount(amount);
         buyGoodsPaymentRequestDTO.setPassword(SafaricomUtils.getPassword(
-                payer, passKey, "" + timestamp
+                ""+businessShortCode, passKey, "" + timestamp
         ));
         buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
-        buyGoodsPaymentRequestDTO.setTransactionDesc("Payment from " + transactionChannelRequestDTO.getPayee().getName() +
-                "\n" + "Payment to " + transactionChannelRequestDTO.getPayer().getName()
-        );
-        buyGoodsPaymentRequestDTO.setAccountReference(transactionChannelRequestDTO.getPayee().getName());
+        buyGoodsPaymentRequestDTO.setTransactionDesc("Payment from account id" +
+                transactionChannelRequestDTO.getPayer()[1].getValue());
+        buyGoodsPaymentRequestDTO.setAccountReference("Payment to " + businessShortCode);
 
 
-        return new BuyGoodsPaymentRequestDTO();
+        return buyGoodsPaymentRequestDTO;
     }
 
     /*

@@ -15,4 +15,5 @@ public class CamelProperties {
     public static final String CORRELATION_ID = "correlationId";
     public static final String STATUS_AVAILABLE = "statusAvailable";
     public static final String TRANSACTION_STATUS = "transactionStatus";
+    public static final String MPESA_API_REQUEST_FAILED = "mpesaApiCallFailed";
 }
