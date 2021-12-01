@@ -16,10 +16,7 @@ zeebe:
     contactpoint: "localhost:26500"
 
 mpesa:
-  initiator:
-    name: testapi
-    password: Safaricom990!
-    security-credentials: VaWgKDyMF9tV+4thRqUNtqQ2EOCxQCFvw2sE4FNthIRINyeH3JaGdYhI9gUEZAOD1cUgW33kRK399YVjqnPv0rZZvR3v5+jJowgqBuSgDDUoRb8pVT8iKF+ORN45PF3BY0/8XBG4B8Ie5S6irw2gFKCOO2e5oGvsRmclkSbwuCTteIngsYV6H1DCf74tYIC7sDoGncWv9MV5LN6X7aJkAiMeIrxZtfW8QhZeLBcOu12O9o+YrmxaAsElSogUfxkBlBrtVXF5Fw3nOsYXtDbCMwxtoMIxwTH9rs+pFofu0z5S2xQyLpprWGgwvgQBxnG3P8f670le1pHmrsWu5n4dmw==
+  business-short-code: 174379
   local:
     host: http://localhost:5000
     transaction-callback: /buygoods/callback
@@ -32,5 +29,5 @@ mpesa:
   api:
     host: https://sandbox.safaricom.co.ke
     lipana: /mpesa/stkpush/v1/processrequest
-    transaction-status: /mpesa/transactionstatus/v1/query
-    passKey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+    transaction-status: /mpesa/stkpushquery/v1/query
+    pass-key: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919

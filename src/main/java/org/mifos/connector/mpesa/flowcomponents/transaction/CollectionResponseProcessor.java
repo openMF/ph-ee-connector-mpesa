@@ -35,24 +35,21 @@ public class CollectionResponseProcessor implements Processor {
         Object hasTransferFailed = exchange.getProperty(TRANSACTION_FAILED);
 
         if (hasTransferFailed != null && (boolean)hasTransferFailed) {
+            String body = exchange.getIn().getBody(String.class);
             variables.put(TRANSACTION_FAILED, true);
-            variables.put(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
+            variables.put(ERROR_INFORMATION, body);
         } else {
             variables.put(TRANSACTION_FAILED, false);
-
-            zeebeClient.newPublishMessageCommand()
-                    .messageName(TRANSFER_MESSAGE)
-                    .correlationKey(exchange.getProperty(TRANSACTION_ID, String.class))
-                    .variables(variables)
-                    .send()
-                    .join();
+            variables.put(SERVER_TRANSACTION_ID, exchange.getProperty(SERVER_TRANSACTION_ID));
         }
 
         logger.info("Publishing transaction message variables: " + variables);
 
+        String id = exchange.getProperty(TRANSACTION_ID, String.class);
+
         zeebeClient.newPublishMessageCommand()
-                .messageName(TRANSFER_RESPONSE)
-                .correlationKey(exchange.getProperty(TRANSACTION_ID, String.class))
+                .messageName(TRANSFER_MESSAGE)
+                .correlationKey(id)
                 .timeToLive(Duration.ofMillis(timeToLive))
                 .variables(variables)
                 .send()

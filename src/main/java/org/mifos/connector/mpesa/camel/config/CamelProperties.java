@@ -10,9 +10,9 @@ public class CamelProperties {
     public static final String TRANSACTION_TYPE = "transactionType";
     public static final String ERROR_INFORMATION = "errorInformation";
     public static final String TRANSACTION_ID = "transactionId";
-    public static final String SERVER_TRANSACTION_ID = "serverTransactionId";
     public static final String CHANNEL_REQUEST = "channelRequest";
     public static final String CORRELATION_ID = "correlationId";
     public static final String STATUS_AVAILABLE = "statusAvailable";
     public static final String TRANSACTION_STATUS = "transactionStatus";
+    public static final String MPESA_API_REQUEST_FAILED = "mpesaApiCallFailed";
 }

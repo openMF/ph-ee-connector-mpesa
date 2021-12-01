@@ -18,35 +18,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class TransactionStatusRequestDTO {
 
-    @JsonProperty("Initiator")
-    private String initiator;
+    @JsonProperty("BusinessShortCode")
+    private Long businessShortCode;
 
-    @JsonProperty("SecurityCredential")
-    private String securityCredential;
+    @JsonProperty("Password")
+    private String password;
 
-    @JsonProperty("CommandID")
-    private String commandId;
+    @JsonProperty("Timestamp")
+    private String timestamp;
 
-    @JsonProperty("TransactionID")
-    private String transactionId;
 
-    @JsonProperty("PartyA")
-    private String partyA;
-
-    @JsonProperty("IdentifierType")
-    private String identifierType;
-
-    @JsonProperty("ResultURL")
-    private String resultUrl;
-
-    @JsonProperty("QueueTimeOutURL")
-    private String queueTimeOutUrl;
-
-    @JsonProperty("Remarks")
-    private String remarks;
-
-    @JsonProperty("Occasion")
-    private String occasion;
+    @JsonProperty("CheckoutRequestID")
+    private String checkoutRequestId;
 
     public TransactionStatusRequestDTO() {
     }
@@ -54,96 +37,42 @@ public class TransactionStatusRequestDTO {
     @Override
     public String toString() {
         return "TransactionStatusRequestDTO{" +
-                "initiator='" + initiator + '\'' +
-                ", securityCredential='" + securityCredential + '\'' +
-                ", commandId='" + commandId + '\'' +
-                ", transactionId='" + transactionId + '\'' +
-                ", partyA='" + partyA + '\'' +
-                ", identifierType='" + identifierType + '\'' +
-                ", resultUrl='" + resultUrl + '\'' +
-                ", queueTimeOutUrl='" + queueTimeOutUrl + '\'' +
-                ", remarks='" + remarks + '\'' +
-                ", occasion='" + occasion + '\'' +
+                "businessShortCode=" + businessShortCode +
+                ", password='" + password + '\'' +
+                ", timestamp='" + timestamp + '\'' +
+                ", checkoutRequestId='" + checkoutRequestId + '\'' +
                 '}';
     }
 
-    public String getInitiator() {
-        return initiator;
+    public Long getBusinessShortCode() {
+        return businessShortCode;
     }
 
-    public void setInitiator(String initiator) {
-        this.initiator = initiator;
+    public void setBusinessShortCode(Long businessShortCode) {
+        this.businessShortCode = businessShortCode;
     }
 
-    public String getSecurityCredential() {
-        return securityCredential;
+    public String getPassword() {
+        return password;
     }
 
-    public void setSecurityCredential(String securityCredential) {
-        this.securityCredential = securityCredential;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    public String getCommandId() {
-        return commandId;
+    public String getTimestamp() {
+        return timestamp;
     }
 
-    public void setCommandId(String commandId) {
-        this.commandId = commandId;
+    public void setTimestamp(String timestamp) {
+        this.timestamp = timestamp;
     }
 
-    public String getTransactionId() {
-        return transactionId;
+    public String getCheckoutRequestId() {
+        return checkoutRequestId;
     }
 
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public String getPartyA() {
-        return partyA;
-    }
-
-    public void setPartyA(String partyA) {
-        this.partyA = partyA;
-    }
-
-    public String getIdentifierType() {
-        return identifierType;
-    }
-
-    public void setIdentifierType(String identifierType) {
-        this.identifierType = identifierType;
-    }
-
-    public String getResultUrl() {
-        return resultUrl;
-    }
-
-    public void setResultUrl(String resultUrl) {
-        this.resultUrl = resultUrl;
-    }
-
-    public String getQueueTimeOutUrl() {
-        return queueTimeOutUrl;
-    }
-
-    public void setQueueTimeOutUrl(String queueTimeOutUrl) {
-        this.queueTimeOutUrl = queueTimeOutUrl;
-    }
-
-    public String getRemarks() {
-        return remarks;
-    }
-
-    public void setRemarks(String remarks) {
-        this.remarks = remarks;
-    }
-
-    public String getOccasion() {
-        return occasion;
-    }
-
-    public void setOccasion(String occasion) {
-        this.occasion = occasion;
+    public void setCheckoutRequestId(String checkoutRequestId) {
+        this.checkoutRequestId = checkoutRequestId;
     }
 }
