@@ -18,7 +18,7 @@ import javax.annotation.PostConstruct;
 import java.util.Map;
 
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
-import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_FAILED;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_ID;
 
 @Component
@@ -74,6 +74,10 @@ public class MpesaWorker {
                         variables.put(TRANSACTION_FAILED, true);
                         String errorBody = exchange.getProperty(ERROR_INFORMATION, String.class);
                         variables.put(ERROR_INFORMATION, errorBody);
+                    } else {
+                        String serverTransactionId = exchange.getProperty(SERVER_TRANSACTION_ID, String.class);
+                        variables.put(TRANSACTION_FAILED, false);
+                        variables.put(SERVER_TRANSACTION_ID, serverTransactionId);
                     }
 
                     client.newCompleteCommand(job.getKey())

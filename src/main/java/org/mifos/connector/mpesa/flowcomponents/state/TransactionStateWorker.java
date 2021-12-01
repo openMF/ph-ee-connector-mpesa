@@ -7,20 +7,17 @@ import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
 import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
-import org.mifos.connector.common.gsma.dto.GSMATransaction;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
-import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import javax.annotation.PostConstruct;
 import java.util.Map;
-
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.SERVER_TRANSACTION_ID;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSFER_RETRY_COUNT;
 
 @Component
@@ -64,17 +61,17 @@ public class TransactionStateWorker {
                     Exchange exchange = new DefaultExchange(camelContext);
                     exchange.setProperty(CORRELATION_ID, variables.get("transactionId"));
                     exchange.setProperty(TRANSACTION_ID, variables.get("transactionId"));
+                    exchange.setProperty(SERVER_TRANSACTION_ID, variables.get(SERVER_TRANSACTION_ID));
                     exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
 
-                    producerTemplate.send("direct:lipana-transaction-status", exchange);
+                    producerTemplate.send("direct:get-transaction-status-base", exchange);
 
-                    variables.put(STATUS_AVAILABLE, exchange.getProperty(STATUS_AVAILABLE, Boolean.class));
+                    /*variables.put(STATUS_AVAILABLE, exchange.getProperty(STATUS_AVAILABLE, Boolean.class));
                     if (exchange.getProperty(STATUS_AVAILABLE, Boolean.class)) {
                         variables.put(TRANSACTION_STATUS, exchange.getProperty(TRANSACTION_STATUS, String.class));
-                    }
+                    }*/
 
                     client.newCompleteCommand(job.getKey())
-                            .variables(variables)
                             .send()
                             .join();
                 })

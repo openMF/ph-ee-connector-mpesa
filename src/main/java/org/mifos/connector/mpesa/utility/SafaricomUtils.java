@@ -30,19 +30,18 @@ public class SafaricomUtils {
     @Value("${mpesa.business-short-code}")
     private Long businessShortCode;
 
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+
     public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-
-
         // parsing amount from USD 123
         long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().split(" ")[1]);
-        long timestamp = 123; //Long.parseLong(sdf.format(new Date()));
+        long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer = Long.parseLong(transactionChannelRequestDTO.getPayer()[0].getValue());
 
         buyGoodsPaymentRequestDTO.setTimestamp(""+timestamp);
-        buyGoodsPaymentRequestDTO.setCallBackURL("https://3ea9-103-85-119-3.ngrok.io" + callbackEndpoint);
+        buyGoodsPaymentRequestDTO.setCallBackURL("https://5c41-103-85-119-3.ngrok.io" + callbackEndpoint);
 
         buyGoodsPaymentRequestDTO.setPartyA(payer);
         buyGoodsPaymentRequestDTO.setPhoneNumber(payer);
@@ -51,7 +50,7 @@ public class SafaricomUtils {
         buyGoodsPaymentRequestDTO.setBusinessShortCode(businessShortCode);
 
         buyGoodsPaymentRequestDTO.setAmount(amount);
-        buyGoodsPaymentRequestDTO.setPassword(SafaricomUtils.getPassword(
+        buyGoodsPaymentRequestDTO.setPassword(getPassword(
                 ""+businessShortCode, passKey, "" + timestamp
         ));
         buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
@@ -61,6 +60,10 @@ public class SafaricomUtils {
 
 
         return buyGoodsPaymentRequestDTO;
+    }
+
+    public Long getTimestamp() {
+        return Long.parseLong(sdf.format(new Date()));
     }
 
     /*
@@ -88,7 +91,7 @@ public class SafaricomUtils {
      * @param timestamp
      * @return password
      */
-    public static String getPassword(String businessShortCode, String passKey, String timestamp) {
+    public String getPassword(String businessShortCode, String passKey, String timestamp) {
         String data = businessShortCode + passKey + timestamp;
         String password = toBase64(data);
         return password;
@@ -99,8 +102,9 @@ public class SafaricomUtils {
      * @param data
      * @return base64 of [data]
      */
-    public static String toBase64(String data) {
+    public String toBase64(String data) {
         return Base64.getEncoder().encodeToString(data.getBytes());
     }
+
 
 }
