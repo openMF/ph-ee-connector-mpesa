@@ -1,11 +1,12 @@
-# temp container to build using gradle
-FROM gradle:7.3.0-jdk17-alpine
-WORKDIR /app
-ADD --chown=gradle:gradle /app /app
-RUN ./gradlew build --stacktrace
+FROM openjdk:13 AS builder
+COPY . mpesa
+WORKDIR /mpesa
+RUN ./gradlew --no-daemon -q -x build
+WORKDIR /mpesa/build/libs
 
-# actual container
-FROM openjdk:13
-COPY build/libs/*.jar .
+FROM openjdk:13 as mpesa
+
+COPY --from=builder /mpesa/build/libs/*.jar ph-ee-connector-mpesa-1.0.0-SNAPSHOT.jar
+
 CMD java -jar *.jar
 
