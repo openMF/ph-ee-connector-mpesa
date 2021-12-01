@@ -20,6 +20,7 @@ repositories {
 
 dependencies {
 
+    implementation 'io.netty:netty-bom:4.1.65.Final'
     implementation 'org.apache.camel.springboot:camel-spring-boot-starter:3.4.0'
     implementation 'org.apache.camel:camel-endpointdsl:3.4.0'
     implementation 'org.apache.camel:camel-jetty:3.4.0'
