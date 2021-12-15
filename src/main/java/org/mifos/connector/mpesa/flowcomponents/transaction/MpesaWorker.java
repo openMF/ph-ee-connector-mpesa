@@ -9,6 +9,7 @@ import org.apache.camel.support.DefaultExchange;
 import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
+import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +55,7 @@ public class MpesaWorker {
 
                     Map<String, Object> variables = job.getVariablesAsMap();
                     TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
-                            (String) variables.get("channelRequest"), TransactionChannelCollectionRequestDTO .class);
+                            (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
                     String transactionId = (String) variables.get(TRANSACTION_ID);
 
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
@@ -72,11 +73,14 @@ public class MpesaWorker {
                     boolean isTransactionFailed = exchange.getProperty(TRANSACTION_FAILED, boolean.class);
                     if(isTransactionFailed) {
                         variables.put(TRANSACTION_FAILED, true);
+                        variables.put(TRANSFER_CREATE_FAILED, true);
+                        variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());
                         String errorBody = exchange.getProperty(ERROR_INFORMATION, String.class);
                         variables.put(ERROR_INFORMATION, errorBody);
                     } else {
                         String serverTransactionId = exchange.getProperty(SERVER_TRANSACTION_ID, String.class);
                         variables.put(TRANSACTION_FAILED, false);
+                        variables.put(TRANSFER_CREATE_FAILED, false);
                         variables.put(SERVER_TRANSACTION_ID, serverTransactionId);
                     }
 
