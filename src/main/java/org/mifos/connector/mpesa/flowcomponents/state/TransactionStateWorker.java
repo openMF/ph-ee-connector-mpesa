@@ -54,7 +54,7 @@ public class TransactionStateWorker {
                     variables.put(TRANSFER_RETRY_COUNT, 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0));
 
                     TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
-                            (String) variables.get("channelRequest"), TransactionChannelCollectionRequestDTO .class);
+                            (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
                             channelRequest);
 
