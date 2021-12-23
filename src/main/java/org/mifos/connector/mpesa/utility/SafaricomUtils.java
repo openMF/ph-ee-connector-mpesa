@@ -2,9 +2,13 @@ package org.mifos.connector.mpesa.utility;
 
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.json.JSONObject;
 import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
 import org.mifos.connector.common.channel.dto.TransactionChannelRequestDTO;
+import org.mifos.connector.common.gsma.dto.GsmaParty;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +21,8 @@ import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPE
 
 @Component
 public class SafaricomUtils {
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Value("${mpesa.local.host}")
     private String host;
@@ -33,12 +39,23 @@ public class SafaricomUtils {
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
     public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
+        logger.info("TransactionChannelCollectionRequestDTO chile converting " + transactionChannelRequestDTO);
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
-        // parsing amount from USD 123
+
         long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
-        long payer = Long.parseLong(transactionChannelRequestDTO.getPayer()[0].getValue());
+        long payer;
+
+        GsmaParty[] party = transactionChannelRequestDTO.getPayer();
+
+        if (party[0].getKey().equals("MSISDN")) {
+            // case where 1st array element is MSISDN
+            payer = Long.parseLong(party[0].getValue());
+        } else {
+            // case where 1st array element is ACCOUNTID
+            payer = Long.parseLong(party[1].getValue());
+        }
 
         buyGoodsPaymentRequestDTO.setTimestamp(""+timestamp);
         buyGoodsPaymentRequestDTO.setCallBackURL(host + callbackEndpoint);
