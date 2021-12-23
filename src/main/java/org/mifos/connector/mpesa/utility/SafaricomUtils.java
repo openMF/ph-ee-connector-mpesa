@@ -19,7 +19,7 @@ import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPE
 public class SafaricomUtils {
 
     @Value("${mpesa.local.host}")
-    private String localhost;
+    private String host;
 
     @Value("${mpesa.local.transaction-callback}")
     private String callbackEndpoint;
@@ -36,12 +36,12 @@ public class SafaricomUtils {
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
         // parsing amount from USD 123
-        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().split(" ")[1]);
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer = Long.parseLong(transactionChannelRequestDTO.getPayer()[0].getValue());
 
         buyGoodsPaymentRequestDTO.setTimestamp(""+timestamp);
-        buyGoodsPaymentRequestDTO.setCallBackURL("https://5c41-103-85-119-3.ngrok.io" + callbackEndpoint);
+        buyGoodsPaymentRequestDTO.setCallBackURL(host + callbackEndpoint);
 
         buyGoodsPaymentRequestDTO.setPartyA(payer);
         buyGoodsPaymentRequestDTO.setPhoneNumber(payer);
