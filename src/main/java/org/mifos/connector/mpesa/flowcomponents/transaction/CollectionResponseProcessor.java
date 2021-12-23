@@ -2,6 +2,7 @@ package org.mifos.connector.mpesa.flowcomponents.transaction;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import org.apache.camel.Exchange;
+import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,11 +38,15 @@ public class CollectionResponseProcessor implements Processor {
         if (hasTransferFailed != null && (boolean)hasTransferFailed) {
             String body = exchange.getIn().getBody(String.class);
             variables.put(TRANSACTION_FAILED, true);
+            variables.put(TRANSFER_CREATE_FAILED, true);
             variables.put(ERROR_INFORMATION, body);
         } else {
             variables.put(TRANSACTION_FAILED, false);
+            variables.put(TRANSFER_CREATE_FAILED, false);
             variables.put(SERVER_TRANSACTION_ID, exchange.getProperty(SERVER_TRANSACTION_ID));
         }
+
+        variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());
 
         logger.info("Publishing transaction message variables: " + variables);
 
