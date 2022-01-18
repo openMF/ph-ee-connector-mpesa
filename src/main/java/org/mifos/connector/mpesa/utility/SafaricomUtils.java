@@ -1,22 +1,20 @@
 package org.mifos.connector.mpesa.utility;
 
-import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
-import org.json.JSONObject;
 import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
-import org.mifos.connector.common.channel.dto.TransactionChannelRequestDTO;
 import org.mifos.connector.common.gsma.dto.GsmaParty;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
+import org.mifos.connector.mpesa.dto.StkCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-
 import static org.mifos.connector.mpesa.safaricom.config.SafaricomProperties.MPESA_BUY_GOODS_TRANSACTION_TYPE;
 
 @Component
@@ -36,7 +34,7 @@ public class SafaricomUtils {
     @Value("${mpesa.business-short-code}")
     private Long businessShortCode;
 
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
     public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
         logger.info("TransactionChannelCollectionRequestDTO chile converting " + transactionChannelRequestDTO);
@@ -84,18 +82,34 @@ public class SafaricomUtils {
     }
 
     /*
+     * Return the result code from the callback received from mpesa server
+     */
+    public static StkCallback getResultCode(JsonObject callback) {
+        StkCallback stkCallback = new StkCallback();
+
+        LinkedHashMap<String, Object> body = (LinkedHashMap<String, Object>) callback.get("Body");
+        LinkedHashMap<String, Object> stkCallbackFromServer = (LinkedHashMap<String, Object>) body.get("stkCallback");
+        stkCallback.setMerchantRequestId((String) stkCallbackFromServer.get("MerchantRequestID"));
+        stkCallback.setCheckoutRequestId((String) stkCallbackFromServer.get("CheckoutRequestID"));
+        stkCallback.setResultCode(Long.parseLong(String.valueOf(stkCallbackFromServer.get("ResultCode"))));
+        stkCallback.setResultDesc((String) stkCallbackFromServer.get("ResultDesc"));
+
+        return stkCallback;
+    }
+
+    /*
      * Return the transaction id from the callback received from mpesa server
      */
     public static String getTransactionId(JsonObject callback) {
         AtomicReference<String> mpesaReceiptNumber = new AtomicReference<>("");
-        JsonObject body = (JsonObject) callback.get("Body");
-        JsonObject metaData = (JsonObject) body.get("CallbackMetadata");
-        JsonArray metaDataItems = (JsonArray) metaData.get("items");
+        LinkedHashMap<String, Object> body = (LinkedHashMap<String, Object>) callback.get("Body");
+        LinkedHashMap<String, Object> metaData = (LinkedHashMap<String, Object>) body.get("CallbackMetadata");
+        ArrayList<Object> metaDataItems = (ArrayList) metaData.get("Item");
 
         metaDataItems.forEach(metaDataItem -> {
-            JsonObject item = (JsonObject) metaDataItem;
-            if(item.getString("Name").equals("MpesaReceiptNumber")) {
-                mpesaReceiptNumber.set(item.getString("value"));
+            LinkedHashMap<String, Object> item = (LinkedHashMap<String, Object>) metaDataItem;
+            if(item.get("Name").equals("MpesaReceiptNumber")) {
+                mpesaReceiptNumber.set((String) item.get("Value"));
             }
         });
         return String.valueOf(mpesaReceiptNumber);
@@ -110,8 +124,7 @@ public class SafaricomUtils {
      */
     public String getPassword(String businessShortCode, String passKey, String timestamp) {
         String data = businessShortCode + passKey + timestamp;
-        String password = toBase64(data);
-        return password;
+        return toBase64(data);
     }
 
     /*

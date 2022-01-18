@@ -5,29 +5,28 @@ import org.apache.camel.Exchange;
 import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import org.apache.camel.Processor;
-
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFORMATION;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
 
 @Component
 public class CollectionResponseProcessor implements Processor {
 
-    @Autowired
-    private ZeebeClient zeebeClient;
+    private final ZeebeClient zeebeClient;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Value("${zeebe.client.ttl}")
     private int timeToLive;
+
+    public CollectionResponseProcessor(ZeebeClient zeebeClient) {
+        this.zeebeClient = zeebeClient;
+    }
 
     @Override
     public void process(Exchange exchange) {
