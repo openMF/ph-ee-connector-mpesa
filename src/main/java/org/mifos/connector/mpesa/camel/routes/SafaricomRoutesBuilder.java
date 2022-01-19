@@ -90,16 +90,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-callback")
                 .log(LoggingLevel.INFO, "Callback body \n\n..\n\n..\n\n.. ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
-                .process(exchange -> {
-                    JsonObject callback = exchange.getIn().getBody(JsonObject.class);
-                    String serverUUID = SafaricomUtils.getTransactionId(callback);
-                    correlationIDStore.addMapping(serverUUID,
-                            exchange.getProperty(CORRELATION_ID, String.class));
-                    String id = correlationIDStore.getClientCorrelation(serverUUID);
-                    exchange.setProperty(TRANSACTION_ID, id);
-                    exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
-                })
-                .to("direct:callback-handler");
+                .to("direct:callback-handler")
+                .process(collectionResponseProcessor);
 
 
         from("direct:callback-handler")
@@ -107,14 +99,19 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .log(LoggingLevel.INFO, "Handling callback body")
                 .process(exchange -> {
                     JsonObject response = exchange.getIn().getBody(JsonObject.class);
-                    StkCallback callback = SafaricomUtils.getResultCode(response);
+                    StkCallback callback = SafaricomUtils.getStkCallback(response);
                     if(callback.getResultCode() == 0) {
+                        String serverUUID = SafaricomUtils.getTransactionId(response);
+                        correlationIDStore.addMapping(serverUUID,
+                                exchange.getProperty(CORRELATION_ID, String.class));
+                        String id = correlationIDStore.getClientCorrelation(serverUUID);
+                        exchange.setProperty(TRANSACTION_ID, id);
+                        exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
                         exchange.setProperty(TRANSACTION_FAILED, false);
                     } else {
                         exchange.setProperty(TRANSACTION_FAILED, true);
                     }
-                })
-                .process(collectionResponseProcessor);
+                });
 
         /*
           Rest endpoint to initiate payment for buy goods

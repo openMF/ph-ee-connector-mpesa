@@ -84,7 +84,7 @@ public class SafaricomUtils {
     /*
      * Return the result code from the callback received from mpesa server
      */
-    public static StkCallback getResultCode(JsonObject callback) {
+    public static StkCallback getStkCallback(JsonObject callback) {
         StkCallback stkCallback = new StkCallback();
 
         LinkedHashMap<String, Object> body = (LinkedHashMap<String, Object>) callback.get("Body");
