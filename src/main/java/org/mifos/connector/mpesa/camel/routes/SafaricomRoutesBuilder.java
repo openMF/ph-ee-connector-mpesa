@@ -7,9 +7,9 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.util.json.JsonObject;
 import org.json.JSONObject;
-import org.mifos.connector.common.gsma.dto.RequestStateDTO;
 import org.mifos.connector.mpesa.auth.AccessTokenStore;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
+import org.mifos.connector.mpesa.dto.StkCallback;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
@@ -17,7 +17,6 @@ import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseP
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
@@ -41,25 +40,28 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Value("${mpesa.api.transaction-status}")
     private String transactionStatusUrl;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private CollectionResponseProcessor collectionResponseProcessor;
+    private final CollectionResponseProcessor collectionResponseProcessor;
 
-    @Autowired
-    private TransactionResponseProcessor transactionResponseProcessor;
+    private final TransactionResponseProcessor transactionResponseProcessor;
 
-    @Autowired
-    private AccessTokenStore accessTokenStore;
+    private final AccessTokenStore accessTokenStore;
 
-    @Autowired
-    private CorrelationIDStore correlationIDStore;
+    private final CorrelationIDStore correlationIDStore;
 
-    @Autowired
-    private SafaricomUtils safaricomUtils;
+    private final SafaricomUtils safaricomUtils;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor, TransactionResponseProcessor transactionResponseProcessor, AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
+        this.objectMapper = objectMapper;
+        this.collectionResponseProcessor = collectionResponseProcessor;
+        this.transactionResponseProcessor = transactionResponseProcessor;
+        this.accessTokenStore = accessTokenStore;
+        this.correlationIDStore = correlationIDStore;
+        this.safaricomUtils = safaricomUtils;
+    }
 
     @Override
     public void configure() {
@@ -88,21 +90,28 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-callback")
                 .log(LoggingLevel.INFO, "Callback body \n\n..\n\n..\n\n.. ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
-                .process(exchange -> {
-                    JsonObject callback = exchange.getIn().getBody(JsonObject.class);
-                    String serverUUID = SafaricomUtils.getTransactionId(callback);
-                    correlationIDStore.addMapping(serverUUID,
-                            exchange.getProperty(CORRELATION_ID, String.class));
-                    exchange.setProperty(TRANSACTION_ID, correlationIDStore.getClientCorrelation(serverUUID));
-                    exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
-                })
-                .choice()
-                .when(exchange -> exchange.getIn().getBody(RequestStateDTO.class).getStatus().equals("completed"))
-                .setProperty(TRANSACTION_FAILED, constant(false))
-                .otherwise()
-                .setProperty(TRANSACTION_FAILED, constant(true))
-                .end()
+                .to("direct:callback-handler")
                 .process(collectionResponseProcessor);
+
+
+        from("direct:callback-handler")
+                .id("callback-handler")
+                .log(LoggingLevel.INFO, "Handling callback body")
+                .process(exchange -> {
+                    JsonObject response = exchange.getIn().getBody(JsonObject.class);
+                    StkCallback callback = SafaricomUtils.getStkCallback(response);
+                    if(callback.getResultCode() == 0) {
+                        String serverUUID = SafaricomUtils.getTransactionId(response);
+                        correlationIDStore.addMapping(serverUUID,
+                                exchange.getProperty(CORRELATION_ID, String.class));
+                        String id = correlationIDStore.getClientCorrelation(serverUUID);
+                        exchange.setProperty(TRANSACTION_ID, id);
+                        exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
+                        exchange.setProperty(TRANSACTION_FAILED, false);
+                    } else {
+                        exchange.setProperty(TRANSACTION_FAILED, true);
+                    }
+                });
 
         /*
           Rest endpoint to initiate payment for buy goods
@@ -142,9 +151,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-base")
                 .log(LoggingLevel.INFO, "Starting buy goods flow")
                 .to("direct:get-access-token")
-                .process(exchange -> {
-                    exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken());
-                })
+                .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-buy-goods")
                 .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
@@ -161,9 +168,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-get-transaction-status-base")
                 .log(LoggingLevel.INFO, "Starting buy goods flow")
                 .to("direct:get-access-token")
-                .process(exchange -> {
-                    exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken());
-                })
+                .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-transaction-status")
                 .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
@@ -246,7 +251,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
                             (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
 
-
                     String password = safaricomUtils.getPassword("" + buyGoodsPaymentRequestDTO.getBusinessShortCode(),
                             passKey,
                             "" + buyGoodsPaymentRequestDTO.getTimestamp());
@@ -254,7 +258,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     buyGoodsPaymentRequestDTO.setPassword(password);
                     buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
 
-                    logger.info("BUY GOODS BODY: \n\n..\n\n..\n\n.. " + buyGoodsPaymentRequestDTO.toString());
+                    logger.info("BUY GOODS BODY: \n\n..\n\n..\n\n.. " + buyGoodsPaymentRequestDTO);
                     logger.info(accessTokenStore.getAccessToken());
 
                     return buyGoodsPaymentRequestDTO;
@@ -289,7 +293,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     ));
 
 
-                    logger.info("TRANSACTION STATUS REQUEST DTO \n\n..\n\n..\n\n.." + transactionStatusRequestDTO.toString());
+                    logger.info("TRANSACTION STATUS REQUEST DTO \n\n..\n\n..\n\n.." + transactionStatusRequestDTO);
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
