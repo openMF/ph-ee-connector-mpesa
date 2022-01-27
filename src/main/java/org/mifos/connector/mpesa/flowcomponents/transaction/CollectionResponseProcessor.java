@@ -1,10 +1,14 @@
 package org.mifos.connector.mpesa.flowcomponents.transaction;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import org.apache.camel.Exchange;
+import org.apache.camel.util.json.JsonObject;
 import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.apache.camel.Processor;
@@ -21,6 +25,9 @@ public class CollectionResponseProcessor implements Processor {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Value("${zeebe.client.ttl}")
     private int timeToLive;
 
@@ -29,7 +36,7 @@ public class CollectionResponseProcessor implements Processor {
     }
 
     @Override
-    public void process(Exchange exchange) {
+    public void process(Exchange exchange) throws JsonProcessingException {
         Map<String, Object> variables = new HashMap<>();
 
         Object hasTransferFailed = exchange.getProperty(TRANSACTION_FAILED);
@@ -47,13 +54,21 @@ public class CollectionResponseProcessor implements Processor {
 
         variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());
 
+        String clientCorrelationId = exchange.getProperty(TRANSACTION_ID, String.class);
+
+        if(clientCorrelationId == null) {
+            JsonObject response = new JsonObject();
+            response.put("developerMessage", "Can't find the correlation ID for the provided callback, with server id " +
+                    exchange.getProperty(SERVER_TRANSACTION_ID) + "It might be possible that either transaction doesn't " +
+                    "exist or this is test hit");
+            response.put("zeebeVariables", objectMapper.writeValueAsString(variables));
+            exchange.getIn().setBody(response.toJson());
+            return;
+        }
         logger.info("Publishing transaction message variables: " + variables);
-
-        String id = exchange.getProperty(TRANSACTION_ID, String.class);
-
         zeebeClient.newPublishMessageCommand()
                 .messageName(TRANSFER_MESSAGE)
-                .correlationKey(id)
+                .correlationKey(clientCorrelationId)
                 .timeToLive(Duration.ofMillis(timeToLive))
                 .variables(variables)
                 .send()
