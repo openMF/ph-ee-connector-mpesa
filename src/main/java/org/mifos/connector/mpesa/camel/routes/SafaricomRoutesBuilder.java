@@ -100,14 +100,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .process(exchange -> {
                     JsonObject response = exchange.getIn().getBody(JsonObject.class);
                     StkCallback callback = SafaricomUtils.getStkCallback(response);
+                    String checkoutRequestId = callback.getCheckoutRequestId();
+                    String clientCorrelationId = correlationIDStore.getClientCorrelation(checkoutRequestId);
+                    exchange.setProperty(TRANSACTION_ID, clientCorrelationId);
+                    exchange.setProperty(SERVER_TRANSACTION_ID, checkoutRequestId);
+                    logger.info("\n\n Correlation Key" + clientCorrelationId +"\n\n" );
                     if(callback.getResultCode() == 0) {
-                        String serverUUID = SafaricomUtils.getTransactionId(response);
-                        correlationIDStore.addMapping(serverUUID,
-                                exchange.getProperty(CORRELATION_ID, String.class));
-                        String id = correlationIDStore.getClientCorrelation(serverUUID);
-                        exchange.setProperty(TRANSACTION_ID, id);
-                        exchange.setProperty(SERVER_TRANSACTION_ID, serverUUID);
                         exchange.setProperty(TRANSACTION_FAILED, false);
+                        exchange.setProperty(SERVER_TRANSACTION_ID, SafaricomUtils.getTransactionId(response));
                     } else {
                         exchange.setProperty(TRANSACTION_FAILED, true);
                     }
@@ -199,6 +199,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
 
+                    correlationIDStore.addMapping(server_id, (String) correlationId);
+                    logger.info("Saved correlationId mapping \n\n {" + server_id + ": " + correlationId + "}");
                 })
                 .process(collectionResponseProcessor)
                 .otherwise()
