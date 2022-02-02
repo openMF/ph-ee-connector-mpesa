@@ -41,7 +41,7 @@ public class OperationsRouteBuilder extends ErrorHandlerRouteBuilder {
                             .send()
                             .join();
                 })
-                .setBody(constant(null));
+                .setBody(constant((Object) null));
 
         from("rest:POST:/channel/job/resolve")
                 .id("job-resolve")
@@ -69,7 +69,7 @@ public class OperationsRouteBuilder extends ErrorHandlerRouteBuilder {
                             .send()
                             .join();
                 })
-                .setBody(constant(null));
+                .setBody(constant((Object) null));
 
         from("rest:POST:/channel/workflow/resolve")
                 .id("workflow-resolve")
@@ -92,7 +92,7 @@ public class OperationsRouteBuilder extends ErrorHandlerRouteBuilder {
                             .send()
                             .join();
                 })
-                .setBody(constant(null));
+                .setBody(constant((Object) null));
 
         from("rest:POST:/channel/workflow/{workflowInstanceKey}/cancel")
                 .id("workflow-cancel")
@@ -100,7 +100,7 @@ public class OperationsRouteBuilder extends ErrorHandlerRouteBuilder {
                 .process(e -> zeebeClient.newCancelInstanceCommand(Long.parseLong(e.getIn().getHeader("workflowInstanceKey", String.class)))
                         .send()
                         .join())
-                .setBody(constant(null));
+                .setBody(constant((Object) null));
 
     }
 }
