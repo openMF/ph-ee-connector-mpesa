@@ -16,7 +16,8 @@ zeebe:
     contactpoint: "localhost:26500"
 
 mpesa:
-  business-short-code: 174379
+  business-short-code: 7385028
+  till: 1234567
   local:
     host: http://localhost:5000
     transaction-callback: /buygoods/callback
