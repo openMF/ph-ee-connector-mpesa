@@ -108,7 +108,8 @@ public class SafaricomUtils {
     public static String getTransactionId(JsonObject callback) {
         AtomicReference<String> mpesaReceiptNumber = new AtomicReference<>("");
         LinkedHashMap<String, Object> body = (LinkedHashMap<String, Object>) callback.get("Body");
-        LinkedHashMap<String, Object> metaData = (LinkedHashMap<String, Object>) body.get("CallbackMetadata");
+        LinkedHashMap<String, Object> stkCallback = (LinkedHashMap<String, Object>) body.get("stkCallback");
+        LinkedHashMap<String, Object> metaData = (LinkedHashMap<String, Object>) stkCallback.get("CallbackMetadata");
         ArrayList<Object> metaDataItems = (ArrayList) metaData.get("Item");
 
         metaDataItems.forEach(metaDataItem -> {

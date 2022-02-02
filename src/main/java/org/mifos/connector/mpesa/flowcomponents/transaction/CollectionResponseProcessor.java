@@ -50,6 +50,10 @@ public class CollectionResponseProcessor implements Processor {
             variables.put(TRANSACTION_FAILED, false);
             variables.put(TRANSFER_CREATE_FAILED, false);
             variables.put(SERVER_TRANSACTION_ID, exchange.getProperty(SERVER_TRANSACTION_ID));
+            Object receiptNumber = exchange.getProperty(SERVER_TRANSACTION_RECEIPT_NUMBER);
+            if(receiptNumber != null) {
+                variables.put(SERVER_TRANSACTION_RECEIPT_NUMBER, receiptNumber);
+            }
         }
 
         variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());
