@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -33,6 +35,9 @@ public class SafaricomUtils {
 
     @Value("${mpesa.business-short-code}")
     private Long businessShortCode;
+
+    @Value("${mpesa.till}")
+    private Long tillNumber;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
@@ -61,7 +66,7 @@ public class SafaricomUtils {
         buyGoodsPaymentRequestDTO.setPartyA(payer);
         buyGoodsPaymentRequestDTO.setPhoneNumber(payer);
 
-        buyGoodsPaymentRequestDTO.setPartyB(businessShortCode);
+        buyGoodsPaymentRequestDTO.setPartyB(tillNumber);
         buyGoodsPaymentRequestDTO.setBusinessShortCode(businessShortCode);
 
         buyGoodsPaymentRequestDTO.setAmount(amount);
@@ -103,7 +108,8 @@ public class SafaricomUtils {
     public static String getTransactionId(JsonObject callback) {
         AtomicReference<String> mpesaReceiptNumber = new AtomicReference<>("");
         LinkedHashMap<String, Object> body = (LinkedHashMap<String, Object>) callback.get("Body");
-        LinkedHashMap<String, Object> metaData = (LinkedHashMap<String, Object>) body.get("CallbackMetadata");
+        LinkedHashMap<String, Object> stkCallback = (LinkedHashMap<String, Object>) body.get("stkCallback");
+        LinkedHashMap<String, Object> metaData = (LinkedHashMap<String, Object>) stkCallback.get("CallbackMetadata");
         ArrayList<Object> metaDataItems = (ArrayList) metaData.get("Item");
 
         metaDataItems.forEach(metaDataItem -> {
@@ -123,6 +129,9 @@ public class SafaricomUtils {
      * @return password
      */
     public String getPassword(String businessShortCode, String passKey, String timestamp) {
+        businessShortCode = businessShortCode.replace("\n", "");
+        passKey = passKey.replace("\n", "");
+        timestamp = timestamp.replace("\n", "");
         String data = businessShortCode + passKey + timestamp;
         return toBase64(data);
     }
@@ -133,7 +142,7 @@ public class SafaricomUtils {
      * @return base64 of [data]
      */
     public String toBase64(String data) {
-        return Base64.getEncoder().encodeToString(data.getBytes());
+        return Base64.getEncoder().encodeToString(data.getBytes(StandardCharsets.UTF_8));
     }
 
 

@@ -104,10 +104,11 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     String clientCorrelationId = correlationIDStore.getClientCorrelation(checkoutRequestId);
                     exchange.setProperty(TRANSACTION_ID, clientCorrelationId);
                     exchange.setProperty(SERVER_TRANSACTION_ID, checkoutRequestId);
-                    logger.info("\n\n Correlation Key" + clientCorrelationId +"\n\n" );
+                    logger.info("\n\n StkCallback " + callback.toString() + "\n");
+                    logger.info("\n\n Correlation Key " + clientCorrelationId +"\n\n" );
                     if(callback.getResultCode() == 0) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
-                        exchange.setProperty(SERVER_TRANSACTION_ID, SafaricomUtils.getTransactionId(response));
+                        exchange.setProperty(SERVER_TRANSACTION_RECEIPT_NUMBER, SafaricomUtils.getTransactionId(response));
                     } else {
                         exchange.setProperty(TRANSACTION_FAILED, true);
                     }
@@ -198,9 +199,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
-
-                    correlationIDStore.addMapping(server_id, (String) correlationId);
-                    logger.info("Saved correlationId mapping \n\n {" + server_id + ": " + correlationId + "}");
                 })
                 .process(collectionResponseProcessor)
                 .otherwise()
@@ -228,6 +226,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
+
+                    correlationIDStore.addMapping(server_id, (String) correlationId);
+                    logger.info("Saved correlationId mapping \n\n {" + server_id + " : " + correlationId + "}");
 
                 })
                 .process(transactionResponseProcessor)

@@ -72,6 +72,12 @@ public class AuthRoutes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Authorization", simple("Basic " + createAuthHeader(clientKey, clientSecret)))
                 .setHeader(Exchange.HTTP_RAW_QUERY, constant("grant_type=client_credentials"))
+                /*.process(exchange -> {
+                    logger.info("\nClient key: " + clientKey);
+                    logger.info("\nSecret key: " + clientSecret);
+                    logger.info("\nBasic " + createAuthHeader(clientKey, clientSecret));
+                    logger.info("\nURL: " + authUrl);
+                })*/
                 .toD(authUrl + "?bridgeEndpoint=true" + "&" +
                         "throwExceptionOnFailure=false");
 
@@ -97,6 +103,8 @@ public class AuthRoutes extends RouteBuilder {
     }
 
     private String createAuthHeader(String key, String secret) {
+        key = key.replace("\n", "");
+        secret = secret.replace("\n", "");
         byte[] credential = (key+":"+secret).getBytes(StandardCharsets.UTF_8);
         return Base64.getEncoder().encodeToString(credential);
     }
