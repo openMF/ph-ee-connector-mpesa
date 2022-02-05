@@ -15,4 +15,7 @@ public class CamelProperties {
     public static final String STATUS_AVAILABLE = "statusAvailable";
     public static final String TRANSACTION_STATUS = "transactionStatus";
     public static final String MPESA_API_REQUEST_FAILED = "mpesaApiCallFailed";
+    public static final String IS_RETRY_EXCEEDED = "isRetryExceeded";
+    public static final String IS_TRANSACTION_PENDING = "isTransactionPending";
+    public static final String ZEEBE_ELEMENT_INSTANCE_KEY = "elementInstanceKey";
 }

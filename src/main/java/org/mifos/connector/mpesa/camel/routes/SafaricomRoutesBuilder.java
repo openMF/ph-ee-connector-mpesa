@@ -40,6 +40,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Value("${mpesa.api.transaction-status}")
     private String transactionStatusUrl;
 
+    @Value("${mpesa.max-retry-count}")
+    private Integer maxRetryCount;
+
     private final ObjectMapper objectMapper;
 
     private final CollectionResponseProcessor collectionResponseProcessor;
@@ -167,14 +170,22 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          */
         from("direct:get-transaction-status-base")
                 .id("buy-goods-get-transaction-status-base")
-                .log(LoggingLevel.INFO, "Starting buy goods flow")
+                .log(LoggingLevel.INFO, "Starting buy goods transaction status flow")
+                .choice()
+                .when(exchangeProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT).isLessThanOrEqualTo(maxRetryCount))
                 .to("direct:get-access-token")
                 .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-transaction-status")
                 .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
                 .log(LoggingLevel.INFO, "Transaction API response: ${body}")
-                .to("direct:transaction-status-response-handler");
+                .to("direct:transaction-status-response-handler")
+                .otherwise()
+                .process(exchange -> {
+                    exchange.setProperty(IS_RETRY_EXCEEDED, true);
+                    exchange.setProperty(TRANSACTION_FAILED, true);
+                })
+                .process(collectionResponseProcessor);
 
         /*
          * Route to handle async transaction status API responses
@@ -198,6 +209,20 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     }
 
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
+                    exchange.setProperty(TRANSACTION_ID, correlationId);
+                })
+                .process(collectionResponseProcessor)
+                .when(header("CamelHttpResponseCode").isEqualTo("500"))
+                .process(exchange -> {
+                    JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
+                    String errorCode = jsonObject.getString("errorCode");
+
+                    if (errorCode.equals("500.001.1001")) {
+                        exchange.setProperty(IS_TRANSACTION_PENDING, true);
+                    } else {
+                        exchange.setProperty(TRANSACTION_FAILED, true);
+                    }
+                    Object correlationId = exchange.getProperty(CORRELATION_ID);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
                 .process(collectionResponseProcessor)

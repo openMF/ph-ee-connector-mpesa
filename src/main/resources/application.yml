@@ -18,6 +18,7 @@ zeebe:
 mpesa:
   business-short-code: 7385028
   till: 1234567
+  max-retry-count: 3
   local:
     host: http://localhost:5000
     transaction-callback: /buygoods/callback
