@@ -15,6 +15,11 @@ zeebe:
   broker:
     contactpoint: "localhost:26500"
 
+operations:
+  host: https://paymenthub.qa.oneacrefund.org/opsapp
+  base-url: /api/v1/errorcode
+  filter-path: /filter
+
 mpesa:
   business-short-code: 7385028
   till: 1234567

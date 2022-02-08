@@ -12,6 +12,7 @@ import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.StkCallback;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
+import org.mifos.connector.mpesa.flowcomponents.mpesa.MpesaGenericProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseProcessor;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
@@ -49,6 +50,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     private final TransactionResponseProcessor transactionResponseProcessor;
 
+    private final MpesaGenericProcessor mpesaGenericProcessor;
+
     private final AccessTokenStore accessTokenStore;
 
     private final CorrelationIDStore correlationIDStore;
@@ -57,10 +60,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor, TransactionResponseProcessor transactionResponseProcessor, AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
+    public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor,
+                                  TransactionResponseProcessor transactionResponseProcessor,
+                                  MpesaGenericProcessor mpesaGenericProcessor,
+                                  AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
         this.objectMapper = objectMapper;
         this.collectionResponseProcessor = collectionResponseProcessor;
         this.transactionResponseProcessor = transactionResponseProcessor;
+        this.mpesaGenericProcessor = mpesaGenericProcessor;
         this.accessTokenStore = accessTokenStore;
         this.correlationIDStore = correlationIDStore;
         this.safaricomUtils = safaricomUtils;
@@ -107,15 +114,24 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     String clientCorrelationId = correlationIDStore.getClientCorrelation(checkoutRequestId);
                     exchange.setProperty(TRANSACTION_ID, clientCorrelationId);
                     exchange.setProperty(SERVER_TRANSACTION_ID, checkoutRequestId);
-                    logger.info("\n\n StkCallback " + callback.toString() + "\n");
+                    logger.info("\n\n StkCallback " + callback + "\n");
                     logger.info("\n\n Correlation Key " + clientCorrelationId +"\n\n" );
                     if(callback.getResultCode() == 0) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                         exchange.setProperty(SERVER_TRANSACTION_RECEIPT_NUMBER, SafaricomUtils.getTransactionId(response));
                     } else {
-                        exchange.setProperty(TRANSACTION_FAILED, true);
+                        exchange.setProperty(ERROR_CODE, callback.getResultCode().toString());
                     }
-                });
+                })
+                .choice()
+                .when(exchangeProperty(ERROR_CODE).isNotNull())
+                .to("direct:filter-by-error-code")
+                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
+                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
+                .process(collectionResponseProcessor)
+                .endChoice()
+                .otherwise()
+                .process(collectionResponseProcessor);
 
         /*
           Rest endpoint to initiate payment for buy goods
@@ -205,19 +221,39 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     if(resultCode.equals("0")) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                     } else {
+                        exchange.setProperty(ERROR_CODE, resultCode);
                         exchange.setProperty(TRANSACTION_FAILED, true);
                     }
 
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
+                .choice()
+                .when(exchangeProperty(ERROR_CODE).isNotNull())
+                .to("direct:filter-by-error-code")
+                .process(exchange -> {
+                    Boolean isRecoverableError = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
+                    if (isRecoverableError) {
+                        exchange.setProperty(IS_TRANSACTION_PENDING, true);
+                    } else {
+                        exchange.setProperty(TRANSACTION_FAILED, true);
+                    }
+                })
+                .process(collectionResponseProcessor)
+                .otherwise()
                 .process(collectionResponseProcessor)
                 .when(header("CamelHttpResponseCode").isEqualTo("500"))
                 .process(exchange -> {
                     JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
                     String errorCode = jsonObject.getString("errorCode");
-
-                    if (errorCode.equals("500.001.1001")) {
+                    exchange.setProperty(ERROR_CODE, errorCode);
+                    Object correlationId = exchange.getProperty(CORRELATION_ID);
+                    exchange.setProperty(TRANSACTION_ID, correlationId);
+                })
+                .to("direct:filter-by-error-code")
+                .process(exchange -> {
+                    Boolean isRecoverableError = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
+                    if (isRecoverableError) {
                         exchange.setProperty(IS_TRANSACTION_PENDING, true);
                     } else {
                         exchange.setProperty(TRANSACTION_FAILED, true);
@@ -293,6 +329,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA API called, response: \n\n..\n\n..\n\n.. ${body}");
 
         /*
@@ -326,6 +363,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n..\n\n..\n\n.. ${body}");
     }
 }

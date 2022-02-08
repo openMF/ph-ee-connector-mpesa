@@ -18,4 +18,9 @@ public class CamelProperties {
     public static final String IS_RETRY_EXCEEDED = "isRetryExceeded";
     public static final String IS_TRANSACTION_PENDING = "isTransactionPending";
     public static final String ZEEBE_ELEMENT_INSTANCE_KEY = "elementInstanceKey";
+    public static final String MPESA_API_RESPONSE = "mpesaApiResponse";
+    public static final String OPERATIONS_FILTER_BY = "operationsFilterBy";
+    public static final String OPERATIONS_FILTER_VALUE = "operationsFilterValue";
+    public static final String ERROR_CODE = "errorCode";
+    public static final String IS_ERROR_RECOVERABLE = "isErrorRecoverable";
 }
