@@ -125,10 +125,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .choice()
                 .when(exchangeProperty(ERROR_CODE).isNotNull())
-                .to("direct:filter-by-error-code")
-                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
-                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
-                .process(collectionResponseProcessor)
+                .to("direct:handle-non-recoverable-transaction")
                 .endChoice()
                 .otherwise()
                 .process(collectionResponseProcessor);
@@ -222,25 +219,15 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                     } else {
                         exchange.setProperty(ERROR_CODE, resultCode);
-                        exchange.setProperty(TRANSACTION_FAILED, true);
                     }
-
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
                 .choice()
                 .when(exchangeProperty(ERROR_CODE).isNotNull())
-                .to("direct:filter-by-error-code")
-                .process(exchange -> {
-                    Boolean isRecoverableError = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
-                    if (isRecoverableError) {
-                        exchange.setProperty(IS_TRANSACTION_PENDING, true);
-                    } else {
-                        exchange.setProperty(TRANSACTION_FAILED, true);
-                    }
-                })
-                .process(collectionResponseProcessor)
-                .otherwise()
+                .to("direct:handle-non-recoverable-transaction")
+                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
+                .endChoice()
                 .process(collectionResponseProcessor)
                 .when(header("CamelHttpResponseCode").isEqualTo("500"))
                 .process(exchange -> {
@@ -250,17 +237,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     Object correlationId = exchange.getProperty(CORRELATION_ID);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
-                .to("direct:filter-by-error-code")
-                .process(exchange -> {
-                    Boolean isRecoverableError = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
-                    if (isRecoverableError) {
-                        exchange.setProperty(IS_TRANSACTION_PENDING, true);
-                    } else {
-                        exchange.setProperty(TRANSACTION_FAILED, true);
-                    }
-                    Object correlationId = exchange.getProperty(CORRELATION_ID);
-                    exchange.setProperty(TRANSACTION_ID, correlationId);
-                })
+                .to("direct:handle-non-recoverable-transaction")
+                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
+                .endChoice()
                 .process(collectionResponseProcessor)
                 .otherwise()
                 .log(LoggingLevel.ERROR, "Collection request unsuccessful")
@@ -365,5 +344,15 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n..\n\n..\n\n.. ${body}");
+
+        from("direct:handle-non-recoverable-transaction")
+                .id("direct:handle-non-recoverable-transaction")
+                .log(LoggingLevel.INFO, "Running route to check if transaction is actually failed")
+                .to("direct:filter-by-error-code")
+                .choice()
+                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
+                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
+                .process(collectionResponseProcessor)
+                .otherwise();
     }
 }

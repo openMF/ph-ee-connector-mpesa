@@ -34,19 +34,22 @@ public class OperationsRoute extends RouteBuilder {
                 .id("filter-by-error-codes")
                 .log(LoggingLevel.INFO, "### Starting FILTER-BY-ERROR-CODE route")
                 .toD(getFilterUrl(FILTER_BY_ERROR_CODE, exchangeProperty(OPERATIONS_FILTER_VALUE)))
-                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}");
+                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
+                .to("direct:filter-response-handler");
 
         from("direct:get-recoverable-error-codes")
                 .id("get-recoverable-error-codes")
                 .log(LoggingLevel.INFO, "### Starting GET-RECOVERABLE-CODES route")
                 .toD(getFilterUrl(FILTER_BY_RECOVERABLE, true))
-                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}");
+                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
+                .to("direct:filter-response-handler");
 
         from("direct:get-non-recoverable-error-codes")
                 .id("get-non-recoverable-error-codes")
                 .log(LoggingLevel.INFO, "### Starting GET-NON-RECOVERABLE-CODES route")
                 .toD(getFilterUrl(FILTER_BY_RECOVERABLE, false))
-                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}");
+                .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
+                .to("direct:filter-response-handler");
 
         from("direct:filter-response-handler")
                 .id("filter-response-handler")
