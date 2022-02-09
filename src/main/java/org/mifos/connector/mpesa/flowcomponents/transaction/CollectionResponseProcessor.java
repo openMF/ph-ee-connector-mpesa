@@ -15,7 +15,9 @@ import org.apache.camel.Processor;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFORMATION;
+
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
 
 @Component
@@ -38,6 +40,25 @@ public class CollectionResponseProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws JsonProcessingException {
         Map<String, Object> variables = new HashMap<>();
+        Object updatedRetryCount = exchange.getProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT);
+        if(updatedRetryCount != null) {
+            variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, updatedRetryCount);
+        }
+
+        Boolean isRetryExceeded = (Boolean) exchange.getProperty(IS_RETRY_EXCEEDED);
+
+        Object isTransactionPending = exchange.getProperty(IS_TRANSACTION_PENDING);
+
+        if(isTransactionPending != null && (boolean) isTransactionPending &&
+                (isRetryExceeded == null || !isRetryExceeded)) {
+
+            Long elementInstanceKey = (Long) exchange.getProperty(ZEEBE_ELEMENT_INSTANCE_KEY);
+            zeebeClient.newSetVariablesCommand(elementInstanceKey)
+                    .variables(variables)
+                    .send()
+                    .join();
+            return;
+        }
 
         Object hasTransferFailed = exchange.getProperty(TRANSACTION_FAILED);
 
@@ -45,7 +66,9 @@ public class CollectionResponseProcessor implements Processor {
             String body = exchange.getIn().getBody(String.class);
             variables.put(TRANSACTION_FAILED, true);
             variables.put(TRANSFER_CREATE_FAILED, true);
-            variables.put(ERROR_INFORMATION, body);
+            if(isRetryExceeded == null || !isRetryExceeded) {
+                variables.put(ERROR_INFORMATION, body);
+            }
         } else {
             variables.put(TRANSACTION_FAILED, false);
             variables.put(TRANSFER_CREATE_FAILED, false);

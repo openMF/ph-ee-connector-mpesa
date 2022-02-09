@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.Map;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
-import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.SERVER_TRANSACTION_ID;
-import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSFER_RETRY_COUNT;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_ID;
 
 @Component
 public class TransactionStateWorker {
@@ -51,18 +51,20 @@ public class TransactionStateWorker {
                 .handler((client, job) -> {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
                     Map<String, Object> variables = job.getVariablesAsMap();
-                    variables.put(TRANSFER_RETRY_COUNT, 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0));
-
+                    Integer retryCount = 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0);
+                    variables.put(TRANSFER_RETRY_COUNT, retryCount);
+                    logger.info("Trying count: " + retryCount);
                     TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
                             (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
                             channelRequest);
-
                     Exchange exchange = new DefaultExchange(camelContext);
                     exchange.setProperty(CORRELATION_ID, variables.get("transactionId"));
                     exchange.setProperty(TRANSACTION_ID, variables.get("transactionId"));
                     exchange.setProperty(SERVER_TRANSACTION_ID, variables.get(SERVER_TRANSACTION_ID));
                     exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
+                    exchange.setProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT, retryCount);
+                    exchange.setProperty(ZEEBE_ELEMENT_INSTANCE_KEY, job.getElementInstanceKey());
 
                     producerTemplate.send("direct:get-transaction-status-base", exchange);
 

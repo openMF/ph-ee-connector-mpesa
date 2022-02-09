@@ -12,6 +12,7 @@ import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.StkCallback;
 import org.mifos.connector.mpesa.dto.TransactionStatusRequestDTO;
 import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
+import org.mifos.connector.mpesa.flowcomponents.mpesa.MpesaGenericProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseProcessor;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
@@ -40,11 +41,16 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
     @Value("${mpesa.api.transaction-status}")
     private String transactionStatusUrl;
 
+    @Value("${mpesa.max-retry-count}")
+    private Integer maxRetryCount;
+
     private final ObjectMapper objectMapper;
 
     private final CollectionResponseProcessor collectionResponseProcessor;
 
     private final TransactionResponseProcessor transactionResponseProcessor;
+
+    private final MpesaGenericProcessor mpesaGenericProcessor;
 
     private final AccessTokenStore accessTokenStore;
 
@@ -54,10 +60,14 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor, TransactionResponseProcessor transactionResponseProcessor, AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
+    public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor,
+                                  TransactionResponseProcessor transactionResponseProcessor,
+                                  MpesaGenericProcessor mpesaGenericProcessor,
+                                  AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
         this.objectMapper = objectMapper;
         this.collectionResponseProcessor = collectionResponseProcessor;
         this.transactionResponseProcessor = transactionResponseProcessor;
+        this.mpesaGenericProcessor = mpesaGenericProcessor;
         this.accessTokenStore = accessTokenStore;
         this.correlationIDStore = correlationIDStore;
         this.safaricomUtils = safaricomUtils;
@@ -104,15 +114,21 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     String clientCorrelationId = correlationIDStore.getClientCorrelation(checkoutRequestId);
                     exchange.setProperty(TRANSACTION_ID, clientCorrelationId);
                     exchange.setProperty(SERVER_TRANSACTION_ID, checkoutRequestId);
-                    logger.info("\n\n StkCallback " + callback.toString() + "\n");
+                    logger.info("\n\n StkCallback " + callback + "\n");
                     logger.info("\n\n Correlation Key " + clientCorrelationId +"\n\n" );
                     if(callback.getResultCode() == 0) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                         exchange.setProperty(SERVER_TRANSACTION_RECEIPT_NUMBER, SafaricomUtils.getTransactionId(response));
                     } else {
-                        exchange.setProperty(TRANSACTION_FAILED, true);
+                        exchange.setProperty(ERROR_CODE, callback.getResultCode().toString());
                     }
-                });
+                })
+                .choice()
+                .when(exchangeProperty(ERROR_CODE).isNotNull())
+                .to("direct:handle-non-recoverable-transaction")
+                .endChoice()
+                .otherwise()
+                .process(collectionResponseProcessor);
 
         /*
           Rest endpoint to initiate payment for buy goods
@@ -167,14 +183,22 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          */
         from("direct:get-transaction-status-base")
                 .id("buy-goods-get-transaction-status-base")
-                .log(LoggingLevel.INFO, "Starting buy goods flow")
+                .log(LoggingLevel.INFO, "Starting buy goods transaction status flow")
+                .choice()
+                .when(exchangeProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT).isLessThanOrEqualTo(maxRetryCount))
                 .to("direct:get-access-token")
                 .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
                 .to("direct:lipana-transaction-status")
                 .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
                 .log(LoggingLevel.INFO, "Transaction API response: ${body}")
-                .to("direct:transaction-status-response-handler");
+                .to("direct:transaction-status-response-handler")
+                .otherwise()
+                .process(exchange -> {
+                    exchange.setProperty(IS_RETRY_EXCEEDED, true);
+                    exchange.setProperty(TRANSACTION_FAILED, true);
+                })
+                .process(collectionResponseProcessor);
 
         /*
          * Route to handle async transaction status API responses
@@ -194,12 +218,28 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     if(resultCode.equals("0")) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                     } else {
-                        exchange.setProperty(TRANSACTION_FAILED, true);
+                        exchange.setProperty(ERROR_CODE, resultCode);
                     }
-
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
+                .choice()
+                .when(exchangeProperty(ERROR_CODE).isNotNull())
+                .to("direct:handle-non-recoverable-transaction")
+                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
+                .endChoice()
+                .process(collectionResponseProcessor)
+                .when(header("CamelHttpResponseCode").isEqualTo("500"))
+                .process(exchange -> {
+                    JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
+                    String errorCode = jsonObject.getString("errorCode");
+                    exchange.setProperty(ERROR_CODE, errorCode);
+                    Object correlationId = exchange.getProperty(CORRELATION_ID);
+                    exchange.setProperty(TRANSACTION_ID, correlationId);
+                })
+                .to("direct:handle-non-recoverable-transaction")
+                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
+                .endChoice()
                 .process(collectionResponseProcessor)
                 .otherwise()
                 .log(LoggingLevel.ERROR, "Collection request unsuccessful")
@@ -268,6 +308,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA API called, response: \n\n..\n\n..\n\n.. ${body}");
 
         /*
@@ -301,6 +342,17 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n..\n\n..\n\n.. ${body}");
+
+        from("direct:handle-non-recoverable-transaction")
+                .id("direct:handle-non-recoverable-transaction")
+                .log(LoggingLevel.INFO, "Running route to check if transaction is actually failed")
+                .to("direct:filter-by-error-code")
+                .choice()
+                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
+                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
+                .process(collectionResponseProcessor)
+                .otherwise();
     }
 }
