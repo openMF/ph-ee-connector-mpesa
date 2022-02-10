@@ -100,8 +100,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("buy-goods-callback")
                 .log(LoggingLevel.INFO, "Callback body \n\n..\n\n..\n\n.. ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, JsonObject.class)
-                .to("direct:callback-handler")
-                .process(collectionResponseProcessor);
+                .to("direct:callback-handler");
 
 
         from("direct:callback-handler")
@@ -121,11 +120,18 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                         exchange.setProperty(SERVER_TRANSACTION_RECEIPT_NUMBER, SafaricomUtils.getTransactionId(response));
                     } else {
                         exchange.setProperty(ERROR_CODE, callback.getResultCode().toString());
+                        exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
                     }
                 })
                 .choice()
                 .when(exchangeProperty(ERROR_CODE).isNotNull())
-                .to("direct:handle-non-recoverable-transaction")
+                .to("direct:filter-by-error-code")
+                .choice()
+                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
+                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
+                .process(collectionResponseProcessor)
+                .otherwise()
+                .log("Current resultCode is recoverable hence waiting for getting transaction status")
                 .endChoice()
                 .otherwise()
                 .process(collectionResponseProcessor);
@@ -205,9 +211,10 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          */
         from("direct:transaction-status-response-handler")
                 .id("transaction-status-response-handler")
+                .log(LoggingLevel.INFO, "## Staring transaction status handler route")
                 .choice()
                 .when(header("CamelHttpResponseCode").isEqualTo("200"))
-                .log(LoggingLevel.INFO, "Collection request successful")
+                .log(LoggingLevel.INFO, "Transaction status request successful")
                 .process(exchange -> {
 
                     JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
@@ -219,30 +226,38 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                     } else {
                         exchange.setProperty(ERROR_CODE, resultCode);
+                        exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
                     }
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                 })
                 .choice()
-                .when(exchangeProperty(ERROR_CODE).isNotNull())
-                .to("direct:handle-non-recoverable-transaction")
-                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
-                .endChoice()
+                .when(exchange -> exchange.getProperty(ERROR_CODE) != null)
+                .to("direct:filter-by-error-code")
+                .process(exchange -> {
+                    boolean isRecoverableError = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
+                    if(isRecoverableError) {
+                        exchange.setProperty(IS_TRANSACTION_PENDING, true);
+                    } else {
+                        exchange.setProperty(TRANSACTION_FAILED, true);
+                    }
+                })
                 .process(collectionResponseProcessor)
+                .endChoice()
                 .when(header("CamelHttpResponseCode").isEqualTo("500"))
                 .process(exchange -> {
+                    logger.info("Handling 500 transaction status case");
                     JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
                     String errorCode = jsonObject.getString("errorCode");
                     exchange.setProperty(ERROR_CODE, errorCode);
+                    exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
                     Object correlationId = exchange.getProperty(CORRELATION_ID);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
+                    exchange.setProperty(IS_TRANSACTION_PENDING, true);
                 })
-                .to("direct:handle-non-recoverable-transaction")
-                .process(exchange -> exchange.setProperty(IS_TRANSACTION_PENDING, true))
-                .endChoice()
                 .process(collectionResponseProcessor)
                 .otherwise()
-                .log(LoggingLevel.ERROR, "Collection request unsuccessful")
+                .log(LoggingLevel.ERROR, "Transaction status request unsuccessful")
                 .process(exchange -> {
                     Object correlationId = exchange.getProperty(CORRELATION_ID);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
@@ -309,7 +324,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .process(mpesaGenericProcessor)
-                .log(LoggingLevel.INFO, "MPESA API called, response: \n\n..\n\n..\n\n.. ${body}");
+                .log(LoggingLevel.INFO, "MPESA API called, response: \n\n ${body}");
 
         /*
          * Takes the request for transaction status and forwards in to the lipana transaction status endpoint
@@ -343,16 +358,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .process(mpesaGenericProcessor)
-                .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n..\n\n..\n\n.. ${body}");
-
-        from("direct:handle-non-recoverable-transaction")
-                .id("direct:handle-non-recoverable-transaction")
-                .log(LoggingLevel.INFO, "Running route to check if transaction is actually failed")
-                .to("direct:filter-by-error-code")
-                .choice()
-                .when(exchangeProperty(IS_ERROR_RECOVERABLE).isEqualTo(false))
-                .process(exchange -> exchange.setProperty(TRANSACTION_FAILED, true))
-                .process(collectionResponseProcessor)
-                .otherwise();
+                .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n ${body}");
     }
 }

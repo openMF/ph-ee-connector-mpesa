@@ -4,7 +4,11 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.mifos.connector.mpesa.dto.ErrorCode;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.IS_ERROR_RECOVERABLE;
 import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_RECOVERABLE;
 
@@ -12,15 +16,16 @@ import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER
 public class ErrorProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
-        JsonArray response = exchange.getIn().getBody(JsonArray.class);
+        List<ErrorCode> codes = exchange.getIn().getBody(List.class);
 
-        if(response.size() == 0) {
+        if(codes.size() == 0) {
             exchange.setProperty(IS_ERROR_RECOVERABLE, false);
             return;
         }
 
-        JsonObject errorCodeObject = (JsonObject) response.get(0);
-        Boolean recoverable = errorCodeObject.getBoolean(FILTER_BY_RECOVERABLE);
+        ErrorCode errorCode = codes.get(0);
+        Boolean recoverable = errorCode.isRecoverable();
         exchange.setProperty(IS_ERROR_RECOVERABLE, recoverable);
+        exchange.getIn().setBody("");
     }
 }

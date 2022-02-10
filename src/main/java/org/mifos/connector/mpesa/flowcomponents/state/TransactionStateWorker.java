@@ -51,8 +51,8 @@ public class TransactionStateWorker {
                 .handler((client, job) -> {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
                     Map<String, Object> variables = job.getVariablesAsMap();
-                    Integer retryCount = 1 + (Integer) variables.getOrDefault(TRANSFER_RETRY_COUNT, 0);
-                    variables.put(TRANSFER_RETRY_COUNT, retryCount);
+                    Integer retryCount = 1 + (Integer) variables.getOrDefault(SERVER_TRANSACTION_STATUS_RETRY_COUNT, 0);
+                    variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, retryCount);
                     logger.info("Trying count: " + retryCount);
                     TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
                             (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
