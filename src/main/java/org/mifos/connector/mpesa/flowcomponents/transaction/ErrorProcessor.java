@@ -2,15 +2,10 @@ package org.mifos.connector.mpesa.flowcomponents.transaction;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
-import org.apache.camel.util.json.JsonArray;
-import org.apache.camel.util.json.JsonObject;
 import org.mifos.connector.mpesa.dto.ErrorCode;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
-
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.IS_ERROR_RECOVERABLE;
-import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_RECOVERABLE;
 
 @Component
 public class ErrorProcessor implements Processor {

@@ -4,21 +4,13 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jackson.ListJacksonDataFormat;
-import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.util.json.JsonArray;
 import org.mifos.connector.mpesa.dto.ErrorCode;
 import org.mifos.connector.mpesa.flowcomponents.transaction.ErrorProcessor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-
-
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_ERROR_CODE;
-import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_RECOVERABLE;
 
 @Component
 public class OperationsRoute extends RouteBuilder {
@@ -41,7 +33,7 @@ public class OperationsRoute extends RouteBuilder {
     @Override
     public void configure() {
 
-        from("rest:get:lest/filter")
+        from("rest:get:test/filter")
                 .id("filter-test")
                 .process(exchange -> {
                     exchange.setProperty(ERROR_CODE, "1037");
@@ -100,7 +92,11 @@ public class OperationsRoute extends RouteBuilder {
                 .id("filter-response-handler")
                 .unmarshal(new ListJacksonDataFormat(ErrorCode.class))
                 .log(LoggingLevel.INFO, "### Starting FILTER-RESPONSE-HANDLER route")
-                .process(errorProcessor);
+                .choice()
+                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .process(errorProcessor)
+                .otherwise()
+                .setProperty(IS_ERROR_RECOVERABLE, constant(true));
 
     }
 
