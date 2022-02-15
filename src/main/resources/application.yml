@@ -6,6 +6,8 @@ camel:
     json-jackson:
       auto-discover-object-mapper: true
 
+tenant: "oaf"
+
 zeebe:
   client:
     max-execution-threads: 100

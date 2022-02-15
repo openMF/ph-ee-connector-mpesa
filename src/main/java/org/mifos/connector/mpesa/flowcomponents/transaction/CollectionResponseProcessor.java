@@ -15,7 +15,6 @@ import org.apache.camel.Processor;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
@@ -51,7 +50,7 @@ public class CollectionResponseProcessor implements Processor {
 
         if(isTransactionPending != null && (boolean) isTransactionPending &&
                 (isRetryExceeded == null || !isRetryExceeded)) {
-
+            logger.info("Updating retry count to " + updatedRetryCount);
             Long elementInstanceKey = (Long) exchange.getProperty(ZEEBE_ELEMENT_INSTANCE_KEY);
             zeebeClient.newSetVariablesCommand(elementInstanceKey)
                     .variables(variables)
@@ -63,7 +62,7 @@ public class CollectionResponseProcessor implements Processor {
         Object hasTransferFailed = exchange.getProperty(TRANSACTION_FAILED);
 
         if (hasTransferFailed != null && (boolean)hasTransferFailed) {
-            String body = exchange.getIn().getBody(String.class);
+            String body = exchange.getProperty(ERROR_INFORMATION, String.class);
             variables.put(TRANSACTION_FAILED, true);
             variables.put(TRANSFER_CREATE_FAILED, true);
             if(isRetryExceeded == null || !isRetryExceeded) {

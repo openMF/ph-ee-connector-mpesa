@@ -1,16 +1,16 @@
 package org.mifos.connector.mpesa.camel.routes;
 
+import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.util.json.JsonArray;
+import org.apache.camel.component.jackson.ListJacksonDataFormat;
+import org.mifos.connector.mpesa.dto.ErrorCode;
 import org.mifos.connector.mpesa.flowcomponents.transaction.ErrorProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.OPERATIONS_FILTER_VALUE;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_ERROR_CODE;
-import static org.mifos.connector.mpesa.camel.config.OperationsProperties.FILTER_BY_RECOVERABLE;
 
 @Component
 public class OperationsRoute extends RouteBuilder {
@@ -24,45 +24,85 @@ public class OperationsRoute extends RouteBuilder {
     @Value("${operations.filter-path}")
     private String operationsFilterPath;
 
+    @Value("${tenant}")
+    private String tenantId;
+
     @Autowired
     private ErrorProcessor errorProcessor;
 
     @Override
-    public void configure() throws Exception {
+    public void configure() {
+
+        from("rest:get:test/filter")
+                .id("filter-test")
+                .process(exchange -> {
+                    exchange.setProperty(ERROR_CODE, "1037");
+                    exchange.setProperty("tenantId", "oaf");
+                })
+                .to("direct:filter-by-error-code")
+                .process(exchange -> {
+                    boolean isRe = exchange.getProperty(IS_ERROR_RECOVERABLE, Boolean.class);
+                    exchange.getIn().setBody(""+isRe);
+                });
 
         from("direct:filter-by-error-code")
                 .id("filter-by-error-codes")
                 .log(LoggingLevel.INFO, "### Starting FILTER-BY-ERROR-CODE route")
-                .toD(getFilterUrl(FILTER_BY_ERROR_CODE, exchangeProperty(OPERATIONS_FILTER_VALUE)))
+                .removeHeader("*")
+                .removeHeader("Authorization")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Content-Type", constant("application/json"))
+                .setHeader("Platform-TenantId", constant(tenantId))
+                .setHeader(Exchange.HTTP_RAW_QUERY,
+                        simple("by=" + FILTER_BY_ERROR_CODE + "&value=${exchangeProperty." + ERROR_CODE + "}"))
+                .toD(getFilterUrl())
+                .log(LoggingLevel.INFO, "Status: ${header.CamelHttpResponseCode}")
                 .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
                 .to("direct:filter-response-handler");
 
         from("direct:get-recoverable-error-codes")
                 .id("get-recoverable-error-codes")
                 .log(LoggingLevel.INFO, "### Starting GET-RECOVERABLE-CODES route")
-                .toD(getFilterUrl(FILTER_BY_RECOVERABLE, true))
+                .removeHeader("*")
+                .removeHeader("Authorization")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Content-Type", constant("application/json"))
+                .setHeader("Platform-TenantId", constant(tenantId))
+                .setHeader(Exchange.HTTP_RAW_QUERY,
+                        simple("by=" + FILTER_BY_ERROR_CODE + "&value=${exchangeProperty." + ERROR_CODE + "}"))
+                .toD(getFilterUrl())
                 .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
                 .to("direct:filter-response-handler");
 
         from("direct:get-non-recoverable-error-codes")
                 .id("get-non-recoverable-error-codes")
                 .log(LoggingLevel.INFO, "### Starting GET-NON-RECOVERABLE-CODES route")
-                .toD(getFilterUrl(FILTER_BY_RECOVERABLE, false))
+                .removeHeader("*")
+                .removeHeader("Authorization")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("Content-Type", constant("application/json"))
+                .setHeader("Platform-TenantId", constant(tenantId))
+                .setHeader(Exchange.HTTP_RAW_QUERY,
+                        simple("by=" + FILTER_BY_ERROR_CODE + "&value=${exchangeProperty." + ERROR_CODE + "}"))
+                .toD(getFilterUrl())
                 .log(LoggingLevel.INFO, "Operations response: \n\n.. ${body}")
                 .to("direct:filter-response-handler");
 
         from("direct:filter-response-handler")
                 .id("filter-response-handler")
-                .unmarshal().json(JsonLibrary.Jackson, JsonArray.class)
+                .unmarshal(new ListJacksonDataFormat(ErrorCode.class))
                 .log(LoggingLevel.INFO, "### Starting FILTER-RESPONSE-HANDLER route")
-                .process(errorProcessor);
+                .choice()
+                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .process(errorProcessor)
+                .otherwise()
+                .setProperty(IS_ERROR_RECOVERABLE, constant(true));
 
     }
 
-    private String getFilterUrl(String filterBy, Object filterValue) {
+    private String getFilterUrl() {
         String url = operationsHost + operationsBaseUrl + operationsFilterPath;
-        String params = String.format("?by=%s&value=%s&", filterBy, filterValue);
-        String internalParams = "bridgeEndpoint=true&throwExceptionOnFailure=false";
-        return url + params + internalParams;
+        String internalParams = "?bridgeEndpoint=true&throwExceptionOnFailure=false";
+        return url + internalParams;
     }
 }
