@@ -13,4 +13,5 @@ public class ZeebeVariables {
     public static final String TRANSFER_RETRY_COUNT = "paymentTransferRetry";
     public static final String TRANSFER_RESPONSE_CREATE = "transferResponse-CREATE";
     public static final String TRANSFER_CREATE_FAILED = "transferCreateFailed";
+    public static final String TIMER = "timer";
 }

@@ -65,6 +65,7 @@ public class TransactionStateWorker {
                     exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
                     exchange.setProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT, retryCount);
                     exchange.setProperty(ZEEBE_ELEMENT_INSTANCE_KEY, job.getElementInstanceKey());
+                    exchange.setProperty(TIMER, variables.get(TIMER));
 
                     producerTemplate.send("direct:get-transaction-status-base", exchange);
 

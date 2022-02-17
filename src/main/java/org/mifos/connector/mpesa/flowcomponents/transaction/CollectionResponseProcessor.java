@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
+import static org.mifos.connector.mpesa.utility.ZeebeUtils.getNextTimer;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
 
 @Component
@@ -50,7 +51,10 @@ public class CollectionResponseProcessor implements Processor {
 
         if(isTransactionPending != null && (boolean) isTransactionPending &&
                 (isRetryExceeded == null || !isRetryExceeded)) {
+            String newTimer = getNextTimer(exchange.getProperty(TIMER, String.class));
             logger.info("Updating retry count to " + updatedRetryCount);
+            logger.info("Updating timer value to " + newTimer);
+            variables.put(TIMER, newTimer);
             Long elementInstanceKey = (Long) exchange.getProperty(ZEEBE_ELEMENT_INSTANCE_KEY);
             zeebeClient.newSetVariablesCommand(elementInstanceKey)
                     .variables(variables)
