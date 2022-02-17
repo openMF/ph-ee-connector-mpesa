@@ -242,8 +242,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                         exchange.setProperty(TRANSACTION_FAILED, true);
                     }
                 })
-                .process(collectionResponseProcessor)
                 .endChoice()
+                .process(collectionResponseProcessor)
                 .when(header("CamelHttpResponseCode").isEqualTo("500"))
                 .process(exchange -> {
                     logger.info("Handling 500 transaction status case");
