@@ -1,14 +1,16 @@
 package org.mifos.connector.mpesa.utility;
 
+
 import com.google.api.client.util.ExponentialBackOff;
-import org.json.JSONObject;
+import org.apache.camel.util.json.JsonObject;
+
 
 import java.io.IOException;
 
 public class ZeebeUtils {
 
-    public static JSONObject getTransferResponseCreateJson() {
-        JSONObject jsonObject = new JSONObject();
+    public static JsonObject getTransferResponseCreateJson() {
+        JsonObject jsonObject = new JsonObject();
         jsonObject.put("completedTimestamp", ""+System.currentTimeMillis());
         return jsonObject;
     }
