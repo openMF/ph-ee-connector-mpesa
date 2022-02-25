@@ -25,20 +25,9 @@ public class ZeebeUtils {
     public static String getNextTimer(String initialTimer){
         String stringSecondsValue = initialTimer.split("T")[1].split("S")[0];
         int initialSeconds = Integer.parseInt(stringSecondsValue);
-        int initSecInMs = initialSeconds * 1000;
 
-        ExponentialBackOff backoff =
-                new ExponentialBackOff.Builder()
-                        .setInitialIntervalMillis(initSecInMs) // initial time
-                        .setMaxIntervalMillis(initSecInMs+1)
-                        .build();
-
-        int next = 0;
-        try {
-            next = (int) backoff.nextBackOffMillis()/1000;
-        } catch (IOException e) {
-            return initialTimer;
-        }
+        int currentPower = (int) ( Math.log(initialSeconds) / Math.log(2) );
+        int next = (int) Math.pow(2, ++currentPower);
 
         return String.format("PT%sS", next);
     }
