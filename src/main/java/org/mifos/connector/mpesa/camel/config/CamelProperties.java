@@ -22,5 +22,6 @@ public class CamelProperties {
     public static final String OPERATIONS_FILTER_BY = "operationsFilterBy";
     public static final String OPERATIONS_FILTER_VALUE = "operationsFilterValue";
     public static final String ERROR_CODE = "errorCode";
+    public static final String ERROR_DESCRIPTION = "errorDescription";
     public static final String IS_ERROR_RECOVERABLE = "isErrorRecoverable";
 }
