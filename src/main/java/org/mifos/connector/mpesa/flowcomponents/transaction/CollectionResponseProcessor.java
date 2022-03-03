@@ -43,6 +43,8 @@ public class CollectionResponseProcessor implements Processor {
         Object updatedRetryCount = exchange.getProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT);
         if(updatedRetryCount != null) {
             variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, updatedRetryCount);
+            variables.put(GET_TRANSACTION_STATUS_RESPONSE, exchange.getIn().getBody(String.class));
+            variables.put(GET_TRANSACTION_STATUS_RESPONSE_CODE, exchange.getIn().getHeader("CamelHttpResponseCode"));
         }
 
         Boolean isRetryExceeded = (Boolean) exchange.getProperty(IS_RETRY_EXCEEDED);
