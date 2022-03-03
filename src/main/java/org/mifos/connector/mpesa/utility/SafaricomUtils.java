@@ -46,7 +46,7 @@ public class SafaricomUtils {
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
 
-        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount());
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount().trim());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer;
 
@@ -54,10 +54,10 @@ public class SafaricomUtils {
 
         if (party[0].getKey().equals("MSISDN")) {
             // case where 1st array element is MSISDN
-            payer = Long.parseLong(party[0].getValue());
+            payer = Long.parseLong(party[0].getValue().trim());
         } else {
             // case where 1st array element is ACCOUNTID
-            payer = Long.parseLong(party[1].getValue());
+            payer = Long.parseLong(party[1].getValue().trim());
         }
 
         buyGoodsPaymentRequestDTO.setTimestamp(""+timestamp);
