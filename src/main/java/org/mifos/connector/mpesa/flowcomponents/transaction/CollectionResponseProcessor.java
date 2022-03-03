@@ -71,6 +71,8 @@ public class CollectionResponseProcessor implements Processor {
             variables.put(TRANSFER_CREATE_FAILED, true);
             if(isRetryExceeded == null || !isRetryExceeded) {
                 variables.put(ERROR_INFORMATION, body);
+                variables.put(ERROR_CODE, exchange.getProperty(ERROR_CODE, String.class));
+                variables.put(ERROR_DESCRIPTION, exchange.getProperty(ERROR_DESCRIPTION, String.class));
             }
         } else {
             variables.put(TRANSACTION_FAILED, false);
