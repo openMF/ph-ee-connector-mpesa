@@ -214,11 +214,12 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .id("transaction-status-response-handler")
                 .log(LoggingLevel.INFO, "## Staring transaction status handler route")
                 .choice()
-                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("200"))
                 .log(LoggingLevel.INFO, "Transaction status request successful")
                 .process(exchange -> {
-
-                    JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
+                    String body = exchange.getIn().getBody(String.class);
+                    JSONObject jsonObject = new JSONObject(body);
+                    exchange.setProperty(LAST_RESPONSE_BODY, body);
                     String server_id = jsonObject.getString("CheckoutRequestID");
                     String resultCode = jsonObject.getString("ResultCode");
                     String resultDescription = jsonObject.getString("ResultDesc");
@@ -247,10 +248,12 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 })
                 .endChoice()
                 .process(collectionResponseProcessor)
-                .when(header("CamelHttpResponseCode").isEqualTo("500"))
+                .when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("500"))
                 .process(exchange -> {
                     logger.info("Handling 500 transaction status case");
-                    JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
+                    String body = exchange.getIn().getBody(String.class);
+                    JSONObject jsonObject = new JSONObject(body);
+                    exchange.setProperty(LAST_RESPONSE_BODY, body);
                     String errorCode = jsonObject.getString("errorCode");
                     String errorDescription = jsonObject.getString("errorMessage");
                     exchange.setProperty(ERROR_CODE, errorCode);
@@ -276,7 +279,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
         from("direct:transaction-response-handler")
                 .id("transaction-response-handler")
                 .choice()
-                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("200"))
                 .log(LoggingLevel.INFO, "Collection request successful")
                 .process(exchange -> {
 

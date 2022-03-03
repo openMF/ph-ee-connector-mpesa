@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import org.apache.camel.Exchange;
+import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.util.json.JsonObject;
 import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
@@ -43,8 +44,21 @@ public class CollectionResponseProcessor implements Processor {
         Object updatedRetryCount = exchange.getProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT);
         if(updatedRetryCount != null) {
             variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, updatedRetryCount);
-            variables.put(GET_TRANSACTION_STATUS_RESPONSE, exchange.getIn().getBody(String.class));
-            variables.put(GET_TRANSACTION_STATUS_RESPONSE_CODE, exchange.getIn().getHeader("CamelHttpResponseCode"));
+            String body = exchange.getProperty(LAST_RESPONSE_BODY, String.class);
+            Object statusCode = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE);
+            if(body == null) {
+                body = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_TEXT, String.class);
+            }
+            if(statusCode == null) {
+                Exception e = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                if(null!=e && e instanceof HttpOperationFailedException)
+                {
+                    HttpOperationFailedException httpOperationFailedException = (HttpOperationFailedException)e;
+                    statusCode=httpOperationFailedException.getStatusCode();
+                }
+            }
+            variables.put(GET_TRANSACTION_STATUS_RESPONSE, body);
+            variables.put(GET_TRANSACTION_STATUS_RESPONSE_CODE, exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE));
         }
 
         Boolean isRetryExceeded = (Boolean) exchange.getProperty(IS_RETRY_EXCEEDED);
