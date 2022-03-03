@@ -77,6 +77,8 @@ public class MpesaWorker {
                         variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());
                         String errorBody = exchange.getProperty(ERROR_INFORMATION, String.class);
                         variables.put(ERROR_INFORMATION, errorBody);
+                        variables.put(ERROR_CODE, exchange.getProperty(ERROR_CODE, String.class));
+                        variables.put(ERROR_DESCRIPTION, exchange.getProperty(ERROR_DESCRIPTION, String.class));
                     } else {
                         String serverTransactionId = exchange.getProperty(SERVER_TRANSACTION_ID, String.class);
                         variables.put(TRANSACTION_FAILED, false);

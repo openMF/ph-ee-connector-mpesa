@@ -121,6 +121,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     } else {
                         exchange.setProperty(ERROR_CODE, callback.getResultCode().toString());
                         exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
+                        exchange.setProperty(ERROR_DESCRIPTION, callback.getResultDesc());
                     }
                 })
                 .choice()
@@ -220,6 +221,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
                     String server_id = jsonObject.getString("CheckoutRequestID");
                     String resultCode = jsonObject.getString("ResultCode");
+                    String resultDescription = jsonObject.getString("ResultDesc");
                     Object correlationId = exchange.getProperty(CORRELATION_ID);
 
                     if(resultCode.equals("0")) {
@@ -227,6 +229,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     } else {
                         exchange.setProperty(ERROR_CODE, resultCode);
                         exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
+                        exchange.setProperty(ERROR_DESCRIPTION, resultDescription);
                     }
                     exchange.setProperty(SERVER_TRANSACTION_ID, server_id);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
@@ -249,8 +252,10 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     logger.info("Handling 500 transaction status case");
                     JSONObject jsonObject = new JSONObject(exchange.getIn().getBody(String.class));
                     String errorCode = jsonObject.getString("errorCode");
+                    String errorDescription = jsonObject.getString("errorMessage");
                     exchange.setProperty(ERROR_CODE, errorCode);
                     exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));
+                    exchange.setProperty(ERROR_DESCRIPTION, errorDescription);
                     Object correlationId = exchange.getProperty(CORRELATION_ID);
                     exchange.setProperty(TRANSACTION_ID, correlationId);
                     exchange.setProperty(IS_TRANSACTION_PENDING, true);
