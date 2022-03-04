@@ -44,21 +44,23 @@ public class CollectionResponseProcessor implements Processor {
         Object updatedRetryCount = exchange.getProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT);
         if(updatedRetryCount != null) {
             variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, updatedRetryCount);
-            String body = exchange.getProperty(LAST_RESPONSE_BODY, String.class);
-            Object statusCode = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE);
-            if(body == null) {
-                body = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_TEXT, String.class);
-            }
-            if(statusCode == null) {
-                Exception e = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-                if(null!=e && e instanceof HttpOperationFailedException)
-                {
-                    HttpOperationFailedException httpOperationFailedException = (HttpOperationFailedException)e;
-                    statusCode=httpOperationFailedException.getStatusCode();
+            Boolean isRetryExceeded = (Boolean) exchange.getProperty(IS_RETRY_EXCEEDED);
+            if(isRetryExceeded == null || !isRetryExceeded) {
+                String body = exchange.getProperty(LAST_RESPONSE_BODY, String.class);
+                Object statusCode = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE);
+                if (body == null) {
+                    body = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_TEXT, String.class);
                 }
+                if (statusCode == null) {
+                    Exception e = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                    if (null != e && e instanceof HttpOperationFailedException) {
+                        HttpOperationFailedException httpOperationFailedException = (HttpOperationFailedException) e;
+                        statusCode = httpOperationFailedException.getStatusCode();
+                    }
+                }
+                variables.put(GET_TRANSACTION_STATUS_RESPONSE, body);
+                variables.put(GET_TRANSACTION_STATUS_RESPONSE_CODE, exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE));
             }
-            variables.put(GET_TRANSACTION_STATUS_RESPONSE, body);
-            variables.put(GET_TRANSACTION_STATUS_RESPONSE_CODE, exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE));
         }
 
         Boolean isRetryExceeded = (Boolean) exchange.getProperty(IS_RETRY_EXCEEDED);
