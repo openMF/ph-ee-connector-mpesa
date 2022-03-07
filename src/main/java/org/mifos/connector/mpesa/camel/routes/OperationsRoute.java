@@ -93,10 +93,10 @@ public class OperationsRoute extends RouteBuilder {
                 .unmarshal(new ListJacksonDataFormat(ErrorCode.class))
                 .log(LoggingLevel.INFO, "### Starting FILTER-RESPONSE-HANDLER route")
                 .choice()
-                .when(header("CamelHttpResponseCode").isEqualTo("200"))
+                .when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("200"))
                 .process(errorProcessor)
                 .otherwise()
-                .setProperty(IS_ERROR_RECOVERABLE, constant(true));
+                .setProperty(IS_ERROR_RECOVERABLE, constant(false));
 
     }
 
