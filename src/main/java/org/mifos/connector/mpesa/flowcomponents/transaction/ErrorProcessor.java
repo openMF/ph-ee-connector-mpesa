@@ -14,7 +14,8 @@ public class ErrorProcessor implements Processor {
         List<ErrorCode> codes = exchange.getIn().getBody(List.class);
 
         if(codes.size() == 0) {
-            exchange.setProperty(IS_ERROR_RECOVERABLE, true);
+            // default case is set to false
+            exchange.setProperty(IS_ERROR_RECOVERABLE, false);
             return;
         }
 
