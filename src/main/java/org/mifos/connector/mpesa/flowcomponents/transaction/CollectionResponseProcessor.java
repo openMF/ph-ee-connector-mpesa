@@ -100,6 +100,11 @@ public class CollectionResponseProcessor implements Processor {
             if(receiptNumber != null) {
                 variables.put(SERVER_TRANSACTION_RECEIPT_NUMBER, receiptNumber);
             }
+            String callback = exchange.getProperty(CALLBACK, String.class);
+            if(callback != null) {
+                variables.put(CALLBACK, callback);
+                variables.put(CALLBACK_RECEIVED, exchange.getProperty(CALLBACK_RECEIVED));
+            }
         }
 
         variables.put(TRANSFER_RESPONSE_CREATE, ZeebeUtils.getTransferResponseCreateJson());

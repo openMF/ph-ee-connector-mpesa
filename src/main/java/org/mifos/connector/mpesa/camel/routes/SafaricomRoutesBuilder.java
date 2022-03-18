@@ -118,6 +118,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     if(callback.getResultCode() == 0) {
                         exchange.setProperty(TRANSACTION_FAILED, false);
                         exchange.setProperty(SERVER_TRANSACTION_RECEIPT_NUMBER, SafaricomUtils.getTransactionId(response));
+                        exchange.setProperty(CALLBACK_RECEIVED, true);
+                        exchange.setProperty(CALLBACK, callback.toString());
                     } else {
                         exchange.setProperty(ERROR_CODE, callback.getResultCode().toString());
                         exchange.setProperty(ERROR_INFORMATION, exchange.getIn().getBody(String.class));

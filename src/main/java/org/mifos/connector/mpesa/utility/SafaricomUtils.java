@@ -46,7 +46,7 @@ public class SafaricomUtils {
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
 
-        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount().trim());
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().trim());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer;
 
