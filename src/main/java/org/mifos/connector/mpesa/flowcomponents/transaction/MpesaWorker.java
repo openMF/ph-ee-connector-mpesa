@@ -6,8 +6,9 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
-import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
+import org.mifos.connector.common.channel.dto.TransactionChannelC2BRequestDTO;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
+import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.mifos.connector.mpesa.utility.ZeebeUtils;
 import org.slf4j.Logger;
@@ -42,6 +43,9 @@ public class MpesaWorker {
     @Autowired
     private SafaricomUtils safaricomUtils;
 
+    @Autowired
+    private MpesaUtils mpesaUtils;
+
     @Value("${zeebe.client.evenly-allocated-max-jobs}")
     private int workerMaxJobs;
 
@@ -54,17 +58,18 @@ public class MpesaWorker {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
 
                     Map<String, Object> variables = job.getVariablesAsMap();
-                    TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
-                            (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
+                    mpesaUtils.setProcess(job.getBpmnProcessId());
+                    TransactionChannelC2BRequestDTO channelRequest = objectMapper.readValue(
+                            (String) variables.get("mpesaChannelRequest"), TransactionChannelC2BRequestDTO .class);
                     String transactionId = (String) variables.get(TRANSACTION_ID);
 
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
                             channelRequest);
-
                     logger.info(buyGoodsPaymentRequestDTO.toString());
                     Exchange exchange = new DefaultExchange(camelContext);
                     exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
                     exchange.setProperty(CORRELATION_ID, transactionId);
+                    exchange.setProperty(DEPLOYED_PROCESS,job.getBpmnProcessId());
 
                     variables.put(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
 

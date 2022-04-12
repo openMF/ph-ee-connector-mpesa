@@ -6,7 +6,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
-import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
+import org.mifos.connector.common.channel.dto.TransactionChannelC2BRequestDTO;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
@@ -54,8 +54,8 @@ public class TransactionStateWorker {
                     Integer retryCount = 1 + (Integer) variables.getOrDefault(SERVER_TRANSACTION_STATUS_RETRY_COUNT, 0);
                     variables.put(SERVER_TRANSACTION_STATUS_RETRY_COUNT, retryCount);
                     logger.info("Trying count: " + retryCount);
-                    TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
-                            (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
+                    TransactionChannelC2BRequestDTO channelRequest = objectMapper.readValue(
+                            (String) variables.get("mpesaChannelRequest"), TransactionChannelC2BRequestDTO .class);
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(
                             channelRequest);
                     Exchange exchange = new DefaultExchange(camelContext);
@@ -66,6 +66,7 @@ public class TransactionStateWorker {
                     exchange.setProperty(SERVER_TRANSACTION_STATUS_RETRY_COUNT, retryCount);
                     exchange.setProperty(ZEEBE_ELEMENT_INSTANCE_KEY, job.getElementInstanceKey());
                     exchange.setProperty(TIMER, variables.get(TIMER));
+                    exchange.setProperty(DEPLOYED_PROCESS,job.getBpmnProcessId());
 
                     producerTemplate.send("direct:get-transaction-status-base", exchange);
 

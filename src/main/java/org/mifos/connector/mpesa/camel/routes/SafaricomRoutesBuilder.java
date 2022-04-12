@@ -15,6 +15,8 @@ import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
 import org.mifos.connector.mpesa.flowcomponents.mpesa.MpesaGenericProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseProcessor;
+import org.mifos.connector.mpesa.utility.MpesaProps;
+import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +31,7 @@ import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_ID;
 @Component
 public class SafaricomRoutesBuilder extends RouteBuilder {
 
-    @Value("${mpesa.api.pass-key}")
-    private String passKey;
 
-    @Value("${mpesa.api.host}")
-    private String buyGoodsHost;
 
     @Value("${mpesa.api.lipana}")
     private String buyGoodsLipanaUrl;
@@ -58,12 +56,17 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     private final SafaricomUtils safaricomUtils;
 
+    private final MpesaUtils mpesaUtils;
+
+    private MpesaProps.MPESA mpesaProps;
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public SafaricomRoutesBuilder(ObjectMapper objectMapper, CollectionResponseProcessor collectionResponseProcessor,
                                   TransactionResponseProcessor transactionResponseProcessor,
                                   MpesaGenericProcessor mpesaGenericProcessor,
-                                  AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils) {
+                                  AccessTokenStore accessTokenStore, CorrelationIDStore correlationIDStore, SafaricomUtils safaricomUtils,
+                                  MpesaUtils mpesaUtils) {
         this.objectMapper = objectMapper;
         this.collectionResponseProcessor = collectionResponseProcessor;
         this.transactionResponseProcessor = transactionResponseProcessor;
@@ -71,6 +74,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
         this.accessTokenStore = accessTokenStore;
         this.correlationIDStore = correlationIDStore;
         this.safaricomUtils = safaricomUtils;
+        this.mpesaUtils = mpesaUtils;
     }
 
     @Override
@@ -80,6 +84,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
          * Use this endpoint for getting the mpesa transaction status
          * The request parameter is same as the safaricom standards
          */
+        mpesaProps = mpesaUtils.getMpesaProperties();
         from("rest:POST:/buygoods/transactionstatus")
                 .id("buy-goods-transaction-status")
                 .process(exchange -> {
@@ -176,6 +181,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
         from("direct:buy-goods-base")
                 .id("buy-goods-base")
                 .log(LoggingLevel.INFO, "Starting buy goods flow")
+                .log(LoggingLevel.INFO, "Starting buy goods flow with retry count: " + maxRetryCount)
                 .to("direct:get-access-token")
                 .process(exchange -> exchange.setProperty(ACCESS_TOKEN, accessTokenStore.getAccessToken()))
                 .log(LoggingLevel.INFO, "Got access token, moving on to API call.")
@@ -320,7 +326,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                             (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
 
                     String password = safaricomUtils.getPassword("" + buyGoodsPaymentRequestDTO.getBusinessShortCode(),
-                            passKey,
+                            mpesaProps.getPassKey(),
                             "" + buyGoodsPaymentRequestDTO.getTimestamp());
 
                     buyGoodsPaymentRequestDTO.setPassword(password);
@@ -332,7 +338,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(mpesaProps.getApiHost() + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA API called, response: \n\n ${body}");
 
@@ -358,7 +364,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                             exchange.getProperty(SERVER_TRANSACTION_ID, String.class));
                     transactionStatusRequestDTO.setPassword(safaricomUtils.getPassword(
                             "" + transactionStatusRequestDTO.getBusinessShortCode(),
-                            passKey, transactionStatusRequestDTO.getTimestamp()
+                            mpesaProps.getPassKey(), transactionStatusRequestDTO.getTimestamp()
                     ));
 
 
@@ -366,7 +372,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(mpesaProps.getApiHost() + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n ${body}");
     }

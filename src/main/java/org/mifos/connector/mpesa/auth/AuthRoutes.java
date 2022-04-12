@@ -5,10 +5,11 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.mifos.connector.common.gsma.dto.AccessTokenDTO;
+import org.mifos.connector.mpesa.utility.MpesaProps;
+import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -20,22 +21,21 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFOR
 @Component
 public class AuthRoutes extends RouteBuilder {
 
-    @Value("${mpesa.auth.host}")
-    private String authUrl;
 
-    @Value("${mpesa.auth.client-key}")
-    private String clientKey;
-
-    @Value("${mpesa.auth.client-secret}")
-    private String clientSecret;
 
     @Autowired
     private AccessTokenStore accessTokenStore;
+
+    @Autowired
+    private MpesaUtils mpesautils;
+
+    private MpesaProps.MPESA mpesaProps;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     public void configure() {
+        mpesaProps = mpesautils.getMpesaProperties();
 
         /*
           Error handling route
@@ -70,7 +70,7 @@ public class AuthRoutes extends RouteBuilder {
                 .log(LoggingLevel.INFO, "Fetching access token")
                 .removeHeader(Exchange.HTTP_PATH)
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
-                .setHeader("Authorization", simple("Basic " + createAuthHeader(clientKey, clientSecret)))
+                .setHeader("Authorization", simple("Basic " + createAuthHeader(mpesaProps.getClientKey(),mpesaProps.getClientSecret())))
                 .setHeader(Exchange.HTTP_RAW_QUERY, constant("grant_type=client_credentials"))
                 /*.process(exchange -> {
                     logger.info("\nClient key: " + clientKey);
@@ -78,7 +78,7 @@ public class AuthRoutes extends RouteBuilder {
                     logger.info("\nBasic " + createAuthHeader(clientKey, clientSecret));
                     logger.info("\nURL: " + authUrl);
                 })*/
-                .toD(authUrl + "?bridgeEndpoint=true" + "&" +
+                .toD(mpesaProps.getAuthHost() + "?bridgeEndpoint=true" + "&" +
                         "throwExceptionOnFailure=false");
 
         /*

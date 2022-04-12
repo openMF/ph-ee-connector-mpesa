@@ -25,4 +25,5 @@ public class CamelProperties {
     public static final String ERROR_DESCRIPTION = "errorDescription";
     public static final String IS_ERROR_RECOVERABLE = "isErrorRecoverable";
     public static final String LAST_RESPONSE_BODY = "lastResponseBody";
+    public static final String DEPLOYED_PROCESS = "deployedProcess";
 }
