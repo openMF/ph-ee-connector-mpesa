@@ -1,12 +1,13 @@
 package org.mifos.connector.mpesa.utility;
 
 import org.apache.camel.util.json.JsonObject;
-import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
+import org.mifos.connector.common.channel.dto.TransactionChannelC2BRequestDTO;
 import org.mifos.connector.common.gsma.dto.GsmaParty;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.StkCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,29 +25,28 @@ public class SafaricomUtils {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Autowired
+    private MpesaUtils mpesaUtils;
+
     @Value("${mpesa.local.host}")
     private String host;
 
     @Value("${mpesa.local.transaction-callback}")
     private String callbackEndpoint;
 
-    @Value("${mpesa.api.pass-key}")
-    private String passKey;
+    private MpesaProps.MPESA mpesaProps;
 
-    @Value("${mpesa.business-short-code}")
-    private Long businessShortCode;
 
-    @Value("${mpesa.till}")
-    private Long tillNumber;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
-    public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
+
+    public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelC2BRequestDTO transactionChannelRequestDTO) {
         logger.info("TransactionChannelCollectionRequestDTO chile converting " + transactionChannelRequestDTO);
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
+        mpesaProps = mpesaUtils.getMpesaProperties();
 
-
-        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().trim());
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount().trim());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer;
 
@@ -66,17 +66,17 @@ public class SafaricomUtils {
         buyGoodsPaymentRequestDTO.setPartyA(payer);
         buyGoodsPaymentRequestDTO.setPhoneNumber(payer);
 
-        buyGoodsPaymentRequestDTO.setPartyB(tillNumber);
-        buyGoodsPaymentRequestDTO.setBusinessShortCode(businessShortCode);
+        buyGoodsPaymentRequestDTO.setPartyB(mpesaProps.getTill());
+        buyGoodsPaymentRequestDTO.setBusinessShortCode(mpesaProps.getBusinessShortCode());
 
         buyGoodsPaymentRequestDTO.setAmount(amount);
         buyGoodsPaymentRequestDTO.setPassword(getPassword(
-                ""+businessShortCode, passKey, "" + timestamp
+                ""+mpesaProps.getBusinessShortCode(), mpesaProps.getPassKey(), "" + timestamp
         ));
         buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
         buyGoodsPaymentRequestDTO.setTransactionDesc("Payment from account id" +
                 transactionChannelRequestDTO.getPayer()[1].getValue());
-        buyGoodsPaymentRequestDTO.setAccountReference("Payment to " + businessShortCode);
+        buyGoodsPaymentRequestDTO.setAccountReference("Payment to " + mpesaProps.getBusinessShortCode());
 
 
         return buyGoodsPaymentRequestDTO;
@@ -144,6 +144,5 @@ public class SafaricomUtils {
     public String toBase64(String data) {
         return Base64.getEncoder().encodeToString(data.getBytes(StandardCharsets.UTF_8));
     }
-
 
 }
