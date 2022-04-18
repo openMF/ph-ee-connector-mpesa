@@ -17,7 +17,7 @@ public class MpesaAMSProp {
 
 
     public List<MpesaProps.MPESA> getGroup(){
-        mpesa  =  mpesaProps.getAmsgroup();
+        mpesa  =  mpesaProps.getGroup();
         return mpesa;
     }
 
