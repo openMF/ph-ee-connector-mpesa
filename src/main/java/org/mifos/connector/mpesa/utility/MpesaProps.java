@@ -8,25 +8,25 @@ import java.util.List;
 
 @Component
 @Configuration
-@ConfigurationProperties(prefix = "mpesa")
+@ConfigurationProperties(prefix = "accounts")
 public class MpesaProps {
 
-    private List<MPESA> amsgroup;
+    private List<MPESA> group;
 
-    public List<MPESA> getAmsgroup() {
-        return amsgroup;
+    public List<MPESA> getGroup() {
+        return group;
     }
 
-    public void setAmsgroup(List<MPESA> amsgroup) {
-        this.amsgroup = amsgroup;
+    public void setGroup(List<MPESA> amsgroup) {
+        this.group = amsgroup;
     }
 
 
     public static class MPESA{
 
         private String name;
-        private Long businessShortCode;
-        private Long till;
+        private String businessShortCode;
+        private String till;
         private String authHost;
         private String clientKey;
         private String clientSecret;
@@ -43,19 +43,19 @@ public class MpesaProps {
         }
 
         public Long getBusinessShortCode() {
-            return businessShortCode;
+            return Long.parseLong(businessShortCode);
         }
 
-        public void setBusinessShortCode(Long businessShortCode) {
-            this.businessShortCode = businessShortCode;
+        public void setBusinessShortCode(String businessShortCode) {
+            this.businessShortCode = businessShortCode.trim();
         }
 
         public Long getTill() {
-            return till;
+            return Long.parseLong(till);
         }
 
-        public void setTill(Long till) {
-            this.till = till;
+        public void setTill(String till) {
+            this.till = till.trim();
         }
 
         public String getAuthHost() {
