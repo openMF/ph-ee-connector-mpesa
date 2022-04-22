@@ -70,6 +70,9 @@ management:
       readiness:
         enabled: true
 
+skip:
+  enabled : false
+
 logging:
   level:
     ROOT: INFO
