@@ -6,7 +6,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
-import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
+import org.mifos.connector.common.channel.dto.TransactionChannelC2BRequestDTO;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.mifos.connector.mpesa.utility.ZeebeUtils;
@@ -54,8 +54,8 @@ public class MpesaWorker {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
 
                     Map<String, Object> variables = job.getVariablesAsMap();
-                    TransactionChannelCollectionRequestDTO channelRequest = objectMapper.readValue(
-                            (String) variables.get("mpesaChannelRequest"), TransactionChannelCollectionRequestDTO .class);
+                    TransactionChannelC2BRequestDTO channelRequest = objectMapper.readValue(
+                            (String) variables.get("mpesaChannelRequest"), TransactionChannelC2BRequestDTO .class);
                     String transactionId = (String) variables.get(TRANSACTION_ID);
 
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = safaricomUtils.channelRequestConvertor(

@@ -1,7 +1,7 @@
 package org.mifos.connector.mpesa.utility;
 
 import org.apache.camel.util.json.JsonObject;
-import org.mifos.connector.common.channel.dto.TransactionChannelCollectionRequestDTO;
+import org.mifos.connector.common.channel.dto.TransactionChannelC2BRequestDTO;
 import org.mifos.connector.common.gsma.dto.GsmaParty;
 import org.mifos.connector.mpesa.dto.BuyGoodsPaymentRequestDTO;
 import org.mifos.connector.mpesa.dto.StkCallback;
@@ -41,12 +41,12 @@ public class SafaricomUtils {
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
-    public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelCollectionRequestDTO transactionChannelRequestDTO) {
+    public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelC2BRequestDTO transactionChannelRequestDTO) {
         logger.info("TransactionChannelCollectionRequestDTO chile converting " + transactionChannelRequestDTO);
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
 
 
-        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().trim());
+        long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount().trim());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
         long payer;
 
