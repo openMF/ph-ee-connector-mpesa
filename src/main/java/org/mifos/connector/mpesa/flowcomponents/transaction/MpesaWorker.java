@@ -87,6 +87,7 @@ public class MpesaWorker {
                         variables.put(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
 
                         producerTemplate.send("direct:buy-goods-base", exchange);
+                        variables.put(MPESA_API_RESPONSE, exchange.getProperty(MPESA_API_RESPONSE));
 
                         boolean isTransactionFailed = exchange.getProperty(TRANSACTION_FAILED, boolean.class);
                         if (isTransactionFailed) {
