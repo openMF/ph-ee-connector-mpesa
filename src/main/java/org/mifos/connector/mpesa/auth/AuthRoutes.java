@@ -5,11 +5,13 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.mifos.connector.common.gsma.dto.AccessTokenDTO;
+import org.mifos.connector.mpesa.utility.ConnectionUtils;
 import org.mifos.connector.mpesa.utility.MpesaProps;
 import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -21,13 +23,14 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFOR
 @Component
 public class AuthRoutes extends RouteBuilder {
 
-
-
     @Autowired
     private AccessTokenStore accessTokenStore;
 
     @Autowired
     private MpesaUtils mpesautils;
+
+    @Value("${mpesa.api.timeout}")
+    private Integer mpesaTimeout;
 
     private MpesaProps.MPESA mpesaProps;
 
@@ -79,7 +82,7 @@ public class AuthRoutes extends RouteBuilder {
                     logger.info("\nURL: " + authUrl);
                 })*/
                 .toD(mpesaProps.getAuthHost() + "?bridgeEndpoint=true" + "&" +
-                        "throwExceptionOnFailure=false");
+                        "throwExceptionOnFailure=false" + ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout));
 
         /*
           Access Token check validity and return value

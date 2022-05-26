@@ -25,6 +25,7 @@ operations:
 mpesa:
   max-retry-count: 2
   api:
+    timeout: 60000
     lipana: /mpesa/stkpush/v1/processrequest
     transaction-status: /mpesa/stkpushquery/v1/query
   local:

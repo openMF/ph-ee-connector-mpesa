@@ -15,6 +15,7 @@ import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
 import org.mifos.connector.mpesa.flowcomponents.mpesa.MpesaGenericProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseProcessor;
+import org.mifos.connector.mpesa.utility.ConnectionUtils;
 import org.mifos.connector.mpesa.utility.MpesaProps;
 import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
@@ -41,6 +42,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     @Value("${mpesa.max-retry-count}")
     private Integer maxRetryCount;
+
+    @Value("${mpesa.api.timeout}")
+    private Integer mpesaTimeout;
 
     private final ObjectMapper objectMapper;
 
@@ -338,7 +342,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(mpesaProps.getApiHost() + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(mpesaProps.getApiHost() + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false&" +
+                        ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout))
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA API called, response: \n\n ${body}");
 
@@ -372,7 +377,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(mpesaProps.getApiHost() + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(mpesaProps.getApiHost() + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false&"+
+                        ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout))
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n ${body}");
     }
