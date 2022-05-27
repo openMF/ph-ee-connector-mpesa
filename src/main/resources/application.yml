@@ -36,6 +36,7 @@ mpesa:
     client-key: 0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5
     client-secret: YzuGNoJxeub8ZC6d
   api:
+    timeout: 60000
     host: https://sandbox.safaricom.co.ke
     lipana: /mpesa/stkpush/v1/processrequest
     transaction-status: /mpesa/stkpushquery/v1/query

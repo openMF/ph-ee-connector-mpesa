@@ -15,6 +15,7 @@ import org.mifos.connector.mpesa.flowcomponents.CorrelationIDStore;
 import org.mifos.connector.mpesa.flowcomponents.mpesa.MpesaGenericProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.CollectionResponseProcessor;
 import org.mifos.connector.mpesa.flowcomponents.transaction.TransactionResponseProcessor;
+import org.mifos.connector.mpesa.utility.ConnectionUtils;
 import org.mifos.connector.mpesa.utility.SafaricomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,9 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     @Value("${mpesa.max-retry-count}")
     private Integer maxRetryCount;
+
+    @Value("${mpesa.api.timeout}")
+    private Integer mpesaTimeout;
 
     private final ObjectMapper objectMapper;
 
@@ -332,7 +336,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return buyGoodsPaymentRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(buyGoodsHost + buyGoodsLipanaUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false&" +
+                        ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout))
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA API called, response: \n\n ${body}");
 
@@ -366,7 +371,8 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     return  transactionStatusRequestDTO;
                 })
                 .marshal().json(JsonLibrary.Jackson)
-                .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(buyGoodsHost + transactionStatusUrl +"?bridgeEndpoint=true&throwExceptionOnFailure=false&" +
+                        ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout))
                 .process(mpesaGenericProcessor)
                 .log(LoggingLevel.INFO, "MPESA STATUS called, response: \n\n ${body}");
     }

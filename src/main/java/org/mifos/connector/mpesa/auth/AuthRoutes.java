@@ -5,6 +5,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.mifos.connector.common.gsma.dto.AccessTokenDTO;
+import org.mifos.connector.mpesa.utility.ConnectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ public class AuthRoutes extends RouteBuilder {
 
     @Value("${mpesa.auth.client-secret}")
     private String clientSecret;
+
+    @Value("${mpesa.api.timeout}")
+    private Integer mpesaTimeout;
 
     @Autowired
     private AccessTokenStore accessTokenStore;
@@ -79,7 +83,8 @@ public class AuthRoutes extends RouteBuilder {
                     logger.info("\nURL: " + authUrl);
                 })*/
                 .toD(authUrl + "?bridgeEndpoint=true" + "&" +
-                        "throwExceptionOnFailure=false");
+                        "throwExceptionOnFailure=false&" +
+                        ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout));
 
         /*
           Access Token check validity and return value
