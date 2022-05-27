@@ -82,7 +82,7 @@ public class AuthRoutes extends RouteBuilder {
                     logger.info("\nURL: " + authUrl);
                 })*/
                 .toD(mpesaProps.getAuthHost() + "?bridgeEndpoint=true" + "&" +
-                        "throwExceptionOnFailure=false" + ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout));
+                        "throwExceptionOnFailure=false&" + ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout));
 
         /*
           Access Token check validity and return value
