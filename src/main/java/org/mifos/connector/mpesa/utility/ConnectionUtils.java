@@ -9,7 +9,7 @@ public class ConnectionUtils {
      * @return
      */
     public static String getConnectionTimeoutDsl(int timeout) {
-        String base = "httpClient.connectTimeout=%s&httpClient.connectionRequestTimeout=%s&httpClient.socketTimeout=%s";
-        return String.format(base, timeout);
+        String base = "httpClient.connectTimeout={}&httpClient.connectionRequestTimeout={}&httpClient.socketTimeout={}";
+        return base.replace("{}", ""+timeout);
     }
 }
