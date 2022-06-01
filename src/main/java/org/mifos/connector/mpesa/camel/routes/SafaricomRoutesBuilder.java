@@ -83,12 +83,13 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
 
     @Override
     public void configure() {
-
+        mpesaProps = mpesaUtils.setMpesaProperties();
+        logger.info("AMS Name set by configure" + mpesaProps.getName());
         /*
          * Use this endpoint for getting the mpesa transaction status
          * The request parameter is same as the safaricom standards
          */
-        mpesaProps = mpesaUtils.getMpesaProperties();
+
         from("rest:POST:/buygoods/transactionstatus")
                 .id("buy-goods-transaction-status")
                 .process(exchange -> {
@@ -326,6 +327,10 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                 .setHeader("Content-Type", constant("application/json"))
                 .setHeader("Authorization", simple("Bearer ${exchangeProperty."+ACCESS_TOKEN+"}"))
                 .setBody(exchange -> {
+                    mpesaProps = mpesaUtils.setMpesaProperties();
+                    logger.info("AMS Name in Route " + mpesaProps.getName());
+                    logger.info("Values from safaricome routebuilder: Shortcode - " + mpesaProps.getBusinessShortCode() + " Till -" +
+                            mpesaProps.getTill());
                     BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO =
                             (BuyGoodsPaymentRequestDTO) exchange.getProperty(BUY_GOODS_REQUEST_BODY);
 

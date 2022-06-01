@@ -44,7 +44,7 @@ public class SafaricomUtils {
     public BuyGoodsPaymentRequestDTO channelRequestConvertor(TransactionChannelC2BRequestDTO transactionChannelRequestDTO) {
         logger.info("TransactionChannelCollectionRequestDTO chile converting " + transactionChannelRequestDTO);
         BuyGoodsPaymentRequestDTO buyGoodsPaymentRequestDTO = new BuyGoodsPaymentRequestDTO();
-        mpesaProps = mpesaUtils.getMpesaProperties();
+        mpesaProps = mpesaUtils.setMpesaProperties();
 
         long amount = Long.parseLong(transactionChannelRequestDTO.getAmount().getAmount().trim());
         long timestamp = getTimestamp(); //123; //Long.parseLong(sdf.format(new Date()));
@@ -77,7 +77,8 @@ public class SafaricomUtils {
         buyGoodsPaymentRequestDTO.setTransactionDesc("Payment from account id" +
                 transactionChannelRequestDTO.getPayer()[1].getValue());
         buyGoodsPaymentRequestDTO.setAccountReference("Payment to " + mpesaProps.getBusinessShortCode());
-
+        logger.info("Values from Safaricom utils: Shortcode - " + mpesaProps.getBusinessShortCode() + " Till -" +
+                mpesaProps.getTill());
 
         return buyGoodsPaymentRequestDTO;
     }
