@@ -38,8 +38,8 @@ public class AuthRoutes extends RouteBuilder {
 
     @Override
     public void configure() {
-        mpesaProps = mpesautils.getMpesaProperties();
-
+        mpesaProps = mpesautils.setMpesaProperties();
+        logger.info("AMS Name set by configure" + mpesaProps.getName());
         /*
           Error handling route
          */
@@ -72,15 +72,13 @@ public class AuthRoutes extends RouteBuilder {
                 .id("access-token-fetch")
                 .log(LoggingLevel.INFO, "Fetching access token")
                 .removeHeader(Exchange.HTTP_PATH)
+                .process(exchange -> {
+                    mpesaProps = mpesautils.setMpesaProperties();
+                    logger.info("AMS Name in Route " + mpesaProps.getName());
+                })
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("Authorization", simple("Basic " + createAuthHeader(mpesaProps.getClientKey(),mpesaProps.getClientSecret())))
                 .setHeader(Exchange.HTTP_RAW_QUERY, constant("grant_type=client_credentials"))
-                /*.process(exchange -> {
-                    logger.info("\nClient key: " + clientKey);
-                    logger.info("\nSecret key: " + clientSecret);
-                    logger.info("\nBasic " + createAuthHeader(clientKey, clientSecret));
-                    logger.info("\nURL: " + authUrl);
-                })*/
                 .toD(mpesaProps.getAuthHost() + "?bridgeEndpoint=true" + "&" +
                         "throwExceptionOnFailure=false&" + ConnectionUtils.getConnectionTimeoutDsl(mpesaTimeout));
 

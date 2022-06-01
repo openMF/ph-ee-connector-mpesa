@@ -29,7 +29,7 @@ public class MpesaUtils {
        return mpesa;
     }
 
-    public MpesaProps.MPESA getMpesaProperties(){
+    public MpesaProps.MPESA setMpesaProperties(){
         MpesaProps.MPESA properties = null;
         List<MpesaProps.MPESA> groups = getGroup();
         for(MpesaProps.MPESA identifier : groups){
