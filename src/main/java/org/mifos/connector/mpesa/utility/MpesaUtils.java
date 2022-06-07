@@ -55,4 +55,33 @@ public class MpesaUtils {
         this.process = process;
     }
 
+    public static String maskString(String strText) {
+
+        char maskChar = '*';
+        int start = 0;
+        int end = strText.length() - 4;
+
+        if (start > end){
+            return "***";
+        }
+
+        int maskLength = end - start;
+
+        if(maskLength == 0)
+            return strText;
+
+        StringBuilder sbMaskString = new StringBuilder(maskLength);
+
+        for(int i = 0; i < maskLength; i++){
+            sbMaskString.append(maskChar);
+        }
+
+        return strText.substring(0, start) + sbMaskString + strText.substring(start + maskLength);
+    }
+
+    public static void main(String[] args)  {
+        String dt = "254708374149";
+        System.out.println(maskString(dt));
+    }
+
 }
