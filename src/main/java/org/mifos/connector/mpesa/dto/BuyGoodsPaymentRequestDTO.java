@@ -2,6 +2,7 @@ package org.mifos.connector.mpesa.dto;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.mifos.connector.mpesa.utility.MpesaUtils;
 
 /**
  * {
@@ -60,7 +61,7 @@ public class BuyGoodsPaymentRequestDTO {
     public String toString() {
         return "BuyGoodsPaymentRequestDTO{" +
                 "businessShortCode='" + businessShortCode + '\'' +
-                ", password='" + password + '\'' +
+                ", password='" + MpesaUtils.maskString(password) + '\'' +
                 ", timestamp=" + timestamp +
                 ", transactionType='" + transactionType + '\'' +
                 ", amount=" + amount +

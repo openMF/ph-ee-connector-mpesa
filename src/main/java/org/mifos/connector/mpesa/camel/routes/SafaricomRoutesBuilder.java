@@ -170,7 +170,6 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                             body, BuyGoodsPaymentRequestDTO.class);
 
                     exchange.setProperty(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
-                    logger.info(body);
                     logger.info(buyGoodsPaymentRequestDTO.toString());
 
                 })
@@ -337,7 +336,7 @@ public class SafaricomRoutesBuilder extends RouteBuilder {
                     buyGoodsPaymentRequestDTO.setTransactionType(MPESA_BUY_GOODS_TRANSACTION_TYPE);
 
                     logger.info("BUY GOODS BODY: \n\n..\n\n..\n\n.. " + buyGoodsPaymentRequestDTO);
-                    logger.info(accessTokenStore.getAccessToken());
+                    logger.info(MpesaUtils.maskString(accessTokenStore.getAccessToken()));
 
                     return buyGoodsPaymentRequestDTO;
                 })
