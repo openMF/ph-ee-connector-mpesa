@@ -76,4 +76,4 @@ skip:
 
 logging:
   level:
-    ROOT: INFO
+    root: INFO
