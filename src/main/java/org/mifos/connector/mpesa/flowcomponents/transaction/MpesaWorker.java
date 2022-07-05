@@ -84,7 +84,7 @@ public class MpesaWorker {
                         exchange.setProperty(CORRELATION_ID, transactionId);
                         exchange.setProperty(DEPLOYED_PROCESS, job.getBpmnProcessId());
 
-                        variables.put(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO);
+                        variables.put(BUY_GOODS_REQUEST_BODY, buyGoodsPaymentRequestDTO.toString());
 
                         producerTemplate.send("direct:buy-goods-base", exchange);
                         variables.put(MPESA_API_RESPONSE, exchange.getProperty(MPESA_API_RESPONSE));
