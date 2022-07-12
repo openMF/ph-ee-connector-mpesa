@@ -6,7 +6,7 @@ public class ZeebeVariables {
     }
     public static final String TRANSACTION_ID = "transactionId";
     public static final String SERVER_TRANSACTION_ID = "mpesaTransactionId";
-    public static final String SERVER_TRANSACTION_RECEIPT_NUMBER = "mpesaReceiptNumber";
+    public static final String SERVER_TRANSACTION_RECEIPT_NUMBER = "externalId";
     public static final String CALLBACK_RECEIVED = "isCallbackReceived";
     public static final String CALLBACK = "callback";
     public static final String SERVER_TRANSACTION_STATUS_RETRY_COUNT = "mpesaTransactionStatusRetryCount";
