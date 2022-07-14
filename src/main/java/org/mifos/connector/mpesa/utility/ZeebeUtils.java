@@ -32,4 +32,13 @@ public class ZeebeUtils {
         return String.format("PT%sS", next);
     }
 
+    public static void sleep(int seconds) {
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (InterruptedException e) {
+            System.out.println("Unexpected InterruptedException" + e);
+            throw new IllegalStateException("Unexpected InterruptedException", e);
+        }
+    }
+
 }
