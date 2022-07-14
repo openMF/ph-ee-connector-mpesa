@@ -50,6 +50,9 @@ public class MpesaWorker {
     @Value("${zeebe.client.evenly-allocated-max-jobs}")
     private int workerMaxJobs;
 
+    @Value("${zeebe.init-transfer.wait-timer}")
+    private int initTransferWaitTimer;
+
     @Value("${skip.enabled}")
     private Boolean skipMpesa;
 
@@ -60,6 +63,12 @@ public class MpesaWorker {
                 .jobType("init-transfer")
                 .handler((client, job) -> {
                     logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
+                    long t1 = System.currentTimeMillis();
+                    logger.info("Going to sleep at " + t1 + " for " + initTransferWaitTimer + " seconds");
+                    ZeebeUtils.sleep(initTransferWaitTimer);
+                    long t2 = System.currentTimeMillis();
+                    logger.info("I am awake at " + t2);
+                    logger.info("Time diff " + (t2-t1));
 
                     Map<String, Object> variables = job.getVariablesAsMap();
                     mpesaUtils.setProcess(job.getBpmnProcessId());
