@@ -26,15 +26,18 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final ObjectMapper objectMapper;
     @Autowired
     private ZeebeProcessStarter zeebeProcessStarter;
-    @Autowired
-    private ZeebeClient zeebeClient;
+    //    @Autowired
+    private final ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
 
+    @Value("${timer}")
+    private String timer;
     public static HashMap<String, String> hm = new HashMap<>();
 
-    public PaybillRoute(ObjectMapper objectMapper) {
+    public PaybillRoute(ObjectMapper objectMapper, ZeebeClient zeebeClient) {
         this.objectMapper = objectMapper;
+        this.zeebeClient = zeebeClient;
     }
 
     @Override
@@ -66,14 +69,14 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String paybillRequestBodyString = e.getIn().getBody(String.class);
                     JSONObject paybillRequest = new JSONObject(paybillRequestBodyString);
                     logger.info("Paybill Request Body : {}", paybillRequestBodyString);
-                    logger.info("Reconciled : {}", paybillRequest.getString("reconciled"));
-                    e.setProperty("MPESA_VALIDATION_WEBHOOK_SUCCESS", paybillRequest.getString("reconciled"));
+                    logger.info("Reconciled : {}", paybillRequest.getBoolean("reconciled"));
+                    e.setProperty("MPESA_VALIDATION_WEBHOOK_SUCCESS", paybillRequest.getBoolean("reconciled"));
 
                     Map<String, Object> variables = new HashMap<>();
-                    variables.put("timer", "PT30S");
+                    variables.put("timer", timer);
                     variables.put("paybillRequestBody", paybillRequestBodyString);
-                    variables.put("validationFailed", paybillRequest.getString("reconciled"));
-
+                    variables.put("validationFailed", !(paybillRequest.getBoolean("reconciled")));
+                    variables.put("confirmationReceived", false);
                     //Starting the paybill workflow
                     String transactionId = zeebeProcessStarter.startZeebeWorkflowPaybill("paybill", variables);
 
@@ -115,7 +118,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                 .log(LoggingLevel.INFO, "Setting zeebe variable for confirmation")
                 .process(e -> {
                     e.setProperty("MPESA_CONFIRMATION_WEBHOOK_SUCCESS", true);
-
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
                     //Getting mpesa and workflow transaction id
@@ -126,12 +128,11 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     variables.put("mpesaTransactionId", mpesaTransactionId);
 
                     zeebeClient.newPublishMessageCommand()
-                            .messageName("settlement")
+                            .messageName("pendingConfirmation")
                             .correlationKey((String) transactionId)
                             .timeToLive(Duration.ofMillis(300))
                             .variables(variables)
-                            .send()
-                            .join();
+                            .send();
                     logger.info("Published Variables");
                 });
     }

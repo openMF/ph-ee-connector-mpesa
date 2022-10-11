@@ -19,6 +19,10 @@ zeebe:
   init-transfer:
     wait-timer: 5
 
+timer: "PT30S"
+
+channel:
+  host: "http://localhost:5001"
 paygops:
   host: "http://localhost:5002"
 roster:
