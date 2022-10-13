@@ -19,6 +19,15 @@ zeebe:
   init-transfer:
     wait-timer: 5
 
+timer: "PT30S"
+
+channel:
+  host: "http://localhost:5001"
+paygops:
+  host: "http://localhost:5002"
+roster:
+  host: "http://localhost:5004"
+
 operations:
   host: http://ph-ee-operations-app
   base-url: /api/v1/errorcode
@@ -41,10 +50,10 @@ accounts:
     - name: "roster"
       business-short-code: ${ACCOUNTS_ROSTER_SHORTCODE:9383028}
       till: ${ACCOUNTS_ROSTER_TILL:1234567}
-      auth-host:  ${ACCOUNTS_ROSTER_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
+      auth-host: ${ACCOUNTS_ROSTER_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
       client-key: ${ACCOUNTS_ROSTER_CLIENTKEY:0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5}
-      client-secret:  ${ACCOUNTS_ROSTER_CLIENTSECRET:YzuGNoJxeub8ZC6d}
-      api-host:  ${ACCOUNTS_ROSTER_APIHOST:https://sandbox.safaricom.co.ke}
+      client-secret: ${ACCOUNTS_ROSTER_CLIENTSECRET:YzuGNoJxeub8ZC6d}
+      api-host: ${ACCOUNTS_ROSTER_APIHOST:https://sandbox.safaricom.co.ke}
       pass-key: ${ACCOUNTS_ROSTER_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
     - name: "paygops"
       business-short-code: ${ACCOUNTS_PAYGOPS_SHORTCODE:122344567}
@@ -55,12 +64,12 @@ accounts:
       api-host: ${ACCOUNTS_PAYGOPS_APIHOST:https://sandbox.safaricom.co.ke}
       pass-key: ${ACCOUNTS_PAYGOPS_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
     - name: "default"
-      business-short-code:  ${ACCOUNTS_ROSTER_SHORTCODE:9383028}
+      business-short-code: ${ACCOUNTS_ROSTER_SHORTCODE:9383028}
       till: ${ACCOUNTS_ROSTER_TILL:1234567}
-      auth-host:  ${ACCOUNTS_ROSTER_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
+      auth-host: ${ACCOUNTS_ROSTER_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
       client-key: ${ACCOUNTS_ROSTER_CLIENTKEY:0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5}
-      client-secret:  ${ACCOUNTS_ROSTER_CLIENTSECRET:YzuGNoJxeub8ZC6d}
-      api-host:  ${ACCOUNTS_ROSTER_APIHOST:https://sandbox.safaricom.co.ke}
+      client-secret: ${ACCOUNTS_ROSTER_CLIENTSECRET:YzuGNoJxeub8ZC6d}
+      api-host: ${ACCOUNTS_ROSTER_APIHOST:https://sandbox.safaricom.co.ke}
       pass-key: ${ACCOUNTS_ROSTER_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
 
 management:
@@ -74,7 +83,7 @@ management:
         enabled: true
 
 skip:
-  enabled : false
+  enabled: false
 
 logging:
   level:
