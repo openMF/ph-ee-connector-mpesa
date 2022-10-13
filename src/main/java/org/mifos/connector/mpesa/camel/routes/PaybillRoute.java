@@ -26,18 +26,18 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final ObjectMapper objectMapper;
     @Autowired
     private ZeebeProcessStarter zeebeProcessStarter;
-    //    @Autowired
-    private final ZeebeClient zeebeClient;
+    @Autowired
+    private ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
 
+    private final String secondaryIdentifierName = "MSISDN";
     @Value("${timer}")
     private String timer;
-    public static HashMap<String, String> hm = new HashMap<>();
+    private static HashMap<String, String> hm = new HashMap<>();
 
-    public PaybillRoute(ObjectMapper objectMapper, ZeebeClient zeebeClient) {
+    public PaybillRoute(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.zeebeClient = zeebeClient;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     //Channel URL
                     logger.info("Channel URL : {}", channelUrl);
                     e.setProperty("channelUrl", channelUrl);
-                    e.setProperty("secondaryIdentifier", "MSISDN");
+                    e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName);
                     logger.info("Paybill Object:{}", obj);
@@ -82,8 +82,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
                     String mpesaTransactionId = paybillRequest.getString("transaction_id");
                     // Storing the external txn id and workflow txn id
-                    logger.info("MPESA Txn ID :{}", mpesaTransactionId);
-                    logger.info("Txn ID :{}", transactionId);
+                    logger.debug("MPESA Txn ID :{}", mpesaTransactionId);
+                    logger.debug("Txn ID :{}", transactionId);
                     hm.put(mpesaTransactionId, transactionId);
                 })
                 .otherwise()
@@ -97,43 +97,41 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
         from("rest:POST:/confirmation")
                 .id("mpesa-confirmation")
                 .unmarshal().json(JsonLibrary.Jackson, PaybillRequestDTO.class)
-                .log(LoggingLevel.INFO, "## Paybill confirmation request payload")
-                .setBody(e -> {
+                .log(LoggingLevel.INFO, "Setting zeebe variable for confirmation")
+                .process(e -> {
                     PaybillRequestDTO paybillConfirmationRequestDTO = e.getIn().getBody(PaybillRequestDTO.class);
                     e.setProperty("mpesaTransactionId", paybillConfirmationRequestDTO.getTransactionID());
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
                     logger.info("AMS Name : {}", amsName);
                     String amsUrl = MpesaUtils.getAMSUrl(amsName);
-                    logger.info("AMS URL : {}", amsUrl);
-
                     e.setProperty("amsUrl", amsUrl);
                     e.setProperty("secondaryIdentifier", "MSISDN");
                     e.setProperty("secondaryIdentifierValue", paybillConfirmationRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillConfirmationRequestDTO, amsName);
-                    logger.info("Paybill Object:{}", obj);
-                    return obj.toString();
-                })
-                .log("MPESA Confirmation Request Body : ${body}")
-                .log(LoggingLevel.INFO, "Setting zeebe variable for confirmation")
-                .process(e -> {
-                    e.setProperty("MPESA_CONFIRMATION_WEBHOOK_SUCCESS", true);
+                    e.setProperty("PAYBILL_CONFIRMATION_REQUEST", obj);
+
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
+                    variables.put("CHANNEL_REQUEST", e.getProperty("PAYBILL_CONFIRMATION_REQUEST"));
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = e.getProperty("mpesaTransactionId").toString();
                     String transactionId = hm.get(mpesaTransactionId);
-                    logger.info("Workflow transaction id : {}", transactionId);
-
+                    logger.debug("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
 
-                    zeebeClient.newPublishMessageCommand()
-                            .messageName("pendingConfirmation")
-                            .correlationKey((String) transactionId)
-                            .timeToLive(Duration.ofMillis(300))
-                            .variables(variables)
-                            .send();
-                    logger.info("Published Variables");
+                    if (transactionId != null) {
+                        zeebeClient.newPublishMessageCommand()
+                                .messageName("pendingConfirmation")
+                                .correlationKey((String) transactionId)
+                                .timeToLive(Duration.ofMillis(300))
+                                .variables(variables)
+                                .send();
+                        logger.info("Published Variables");
+                    } else {
+                        logger.debug("No workflow of such transaction ID exists");
+                    }
+
                 });
     }
 }

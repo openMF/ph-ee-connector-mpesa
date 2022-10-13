@@ -6,6 +6,7 @@ import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,11 +26,22 @@ public class MpesaUtils {
 
     private String process = "process";
 
+    @Value("${paygops.host}")
+    private static String paygopsHost;
+    @Value("${roster.host}")
+    private static String rosterHost;
+
+    enum ams {
+        paygops,
+        roster;
+    }
+
     public static String getAMSUrl(String amsName) {
-        if (Objects.equals(amsName, "paygops")) {
-            return "http://localhost:5002";
-        } else if (Objects.equals(amsName, "roster")) {
-            return "http://localhost:5004";
+
+        if (Objects.equals(amsName, ams.paygops.toString())) {
+            return paygopsHost;
+        } else if (Objects.equals(amsName, ams.roster.toString())) {
+            return rosterHost;
         }
         return null;
     }
