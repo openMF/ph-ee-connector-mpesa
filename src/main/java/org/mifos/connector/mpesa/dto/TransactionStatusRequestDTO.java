@@ -1,21 +1,25 @@
 package org.mifos.connector.mpesa.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * {
- *     "Initiator": "",
- *     "SecurityCredential": "",
- *     "CommandID": "TransactionStatusQuery",
- *     "TransactionID": "",
- *     "PartyA": "",
- *     "IdentifierType": "1",
- *     "ResultURL": "",
- *     "QueueTimeOutURL": "",
- *     "Remarks": "",
- *     "Occasion": ""
+ * "Initiator": "",
+ * "SecurityCredential": "",
+ * "CommandID": "TransactionStatusQuery",
+ * "TransactionID": "",
+ * "PartyA": "",
+ * "IdentifierType": "1",
+ * "ResultURL": "",
+ * "QueueTimeOutURL": "",
+ * "Remarks": "",
+ * "Occasion": ""
  * }
  */
+@Getter
+@Setter
 public class TransactionStatusRequestDTO {
 
     @JsonProperty("BusinessShortCode")
@@ -42,37 +46,5 @@ public class TransactionStatusRequestDTO {
                 ", timestamp='" + timestamp + '\'' +
                 ", checkoutRequestId='" + checkoutRequestId + '\'' +
                 '}';
-    }
-
-    public Long getBusinessShortCode() {
-        return businessShortCode;
-    }
-
-    public void setBusinessShortCode(Long businessShortCode) {
-        this.businessShortCode = businessShortCode;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public String getCheckoutRequestId() {
-        return checkoutRequestId;
-    }
-
-    public void setCheckoutRequestId(String checkoutRequestId) {
-        this.checkoutRequestId = checkoutRequestId;
     }
 }

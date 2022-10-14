@@ -1,6 +1,8 @@
 package org.mifos.connector.mpesa.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
 
 //    {
@@ -16,6 +18,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 //        "MSISDN":"2547*****149",
 //        "FirstName":"John",
 //    }
+@Getter
+@Setter
 public class PaybillRequestDTO {
     @JsonProperty("TransactionType")
     private String transactionType;
@@ -63,94 +67,6 @@ public class PaybillRequestDTO {
         this.accountBalance = accountBalance;
         this.thirdPatrytransactionID = thirdPatrytransactionID;
         this.msisdn = msisdn;
-        this.firstname = firstname;
-    }
-
-    public String getTransactionType() {
-        return transactionType;
-    }
-
-    public void setTransactionType(String transactionType) {
-        this.transactionType = transactionType;
-    }
-
-    public String getTransactionID() {
-        return transactionID;
-    }
-
-    public void setTransactionID(String transactionID) {
-        this.transactionID = transactionID;
-    }
-
-    public String getTransactionTime() {
-        return transactionTime;
-    }
-
-    public void setTransactionTime(String transactionTime) {
-        this.transactionTime = transactionTime;
-    }
-
-    public String getTransactionAmount() {
-        return transactionAmount;
-    }
-
-    public void setTransactionAmount(String transactionAmount) {
-        this.transactionAmount = transactionAmount;
-    }
-
-    public String getShortCode() {
-        return shortCode;
-    }
-
-    public void setShortCode(String shortCode) {
-        this.shortCode = shortCode;
-    }
-
-    public String getBillRefNo() {
-        return billRefNo;
-    }
-
-    public void setBillRefNo(String billRefNo) {
-        this.billRefNo = billRefNo;
-    }
-
-    public String getInvoiceNumber() {
-        return invoiceNumber;
-    }
-
-    public void setInvoiceNumber(String invoiceNumber) {
-        this.invoiceNumber = invoiceNumber;
-    }
-
-    public String getAccountBalance() {
-        return accountBalance;
-    }
-
-    public void setAccountBalance(String accountBalance) {
-        this.accountBalance = accountBalance;
-    }
-
-    public String getThirdPatrytransactionID() {
-        return thirdPatrytransactionID;
-    }
-
-    public void setThirdPatrytransactionID(String thirdPatrytransactionID) {
-        this.thirdPatrytransactionID = thirdPatrytransactionID;
-    }
-
-    public String getMsisdn() {
-        return msisdn;
-    }
-
-    public void setMsisdn(String msisdn) {
-        this.msisdn = msisdn;
-    }
-
-    public String getFirstname() {
-        return firstname;
-    }
-
-    public void setFirstname(String firstname) {
         this.firstname = firstname;
     }
 
