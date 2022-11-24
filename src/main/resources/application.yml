@@ -22,11 +22,11 @@ zeebe:
 timer: "PT30S"
 
 channel:
-  host: "http://localhost:5001"
+  host: http://ph-ee-connector-channel
 paygops:
-  host: "http://localhost:5002"
+  host: http://ph-ee-connector-ams-paygops
 roster:
-  host: "http://localhost:5004"
+  host: http://ph-ee-connector-ams-roster
 
 operations:
   host: http://ph-ee-operations-app
