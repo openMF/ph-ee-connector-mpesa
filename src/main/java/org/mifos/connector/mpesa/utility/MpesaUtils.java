@@ -2,6 +2,7 @@ package org.mifos.connector.mpesa.utility;
 
 import org.json.JSONObject;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
+import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,31 @@ public class MpesaUtils {
     private static String paygopsHost;
     @Value("${roster.host}")
     private static String rosterHost;
+
+    public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName) {
+        JSONObject payer = new JSONObject();
+        JSONObject partyIdInfoPayer = new JSONObject();
+        partyIdInfoPayer.put("partyIdType", "MSISDN");
+        partyIdInfoPayer.put("partyIdentifier", paybillConfirmationRequestDTO.getMsisdn());
+        payer.put("partyIdInfo", partyIdInfoPayer);
+
+        JSONObject payee = new JSONObject();
+        JSONObject partyIdInfoPayee = new JSONObject();
+        if (amsName.equalsIgnoreCase("paygops")) {
+            partyIdInfoPayee.put("partyIdType", "FOUNDATIONALID");
+            partyIdInfoPayee.put("partyIdentifier", paybillConfirmationRequestDTO.getBillRefNo());
+        } else if (amsName.equalsIgnoreCase("roster")) {
+            partyIdInfoPayee.put("partyIdType", "ACCOUNTID");
+            partyIdInfoPayee.put("partyIdentifier", paybillConfirmationRequestDTO.getBillRefNo());
+        }
+        payee.put("partyIdInfo", partyIdInfoPayee);
+
+        JSONObject amount = new JSONObject();
+        amount.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
+        amount.put("currency", "TZS");
+
+        return new ChannelSettlementRequestDTO(payer, payee, amount);
+    }
 
     enum ams {
         paygops,

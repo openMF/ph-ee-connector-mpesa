@@ -7,6 +7,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.json.JSONObject;
 import org.mifos.connector.common.camel.ErrorHandlerRouteBuilder;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
+import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
 import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.mifos.connector.mpesa.zeebe.ZeebeProcessStarter;
@@ -19,6 +20,9 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CHANNEL_REQUEST;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 
 @Component
 public class PaybillRoute extends ErrorHandlerRouteBuilder {
@@ -50,14 +54,13 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     PaybillRequestDTO paybillRequestDTO = e.getIn().getBody(PaybillRequestDTO.class);
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
-                    logger.info("AMS Name : {}", amsName);
+                    logger.debug("AMS Name : {}", amsName);
                     //Channel URL
-                    logger.info("Channel URL : {}", channelUrl);
+                    logger.debug("Channel URL : {}", channelUrl);
                     e.setProperty("channelUrl", channelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName);
-                    logger.info("Paybill Object:{}", obj);
                     return obj.toString();
                 })
                 .log("MPESA Request Body : ${body}")
@@ -68,8 +71,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                 .process(e -> {
                     String paybillRequestBodyString = e.getIn().getBody(String.class);
                     JSONObject paybillRequest = new JSONObject(paybillRequestBodyString);
-                    logger.info("Paybill Request Body : {}", paybillRequestBodyString);
-                    logger.info("Reconciled : {}", paybillRequest.getBoolean("reconciled"));
+                    logger.debug("Paybill Request Body : {}", paybillRequestBodyString);
+                    logger.debug("Reconciled : {}", paybillRequest.getBoolean("reconciled"));
                     e.setProperty("MPESA_VALIDATION_WEBHOOK_SUCCESS", paybillRequest.getBoolean("reconciled"));
 
                     Map<String, Object> variables = new HashMap<>();
@@ -85,6 +88,11 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.debug("MPESA Txn ID :{}", mpesaTransactionId);
                     logger.debug("Txn ID :{}", transactionId);
                     hm.put(mpesaTransactionId, transactionId);
+                    // Sending mpesa specific response
+                    JSONObject responseObject = new JSONObject();
+                    responseObject.put("ResultCode", (paybillRequest.getBoolean("reconciled")) ? 0 : 1);
+                    responseObject.put("ResultDesc", (paybillRequest.getBoolean("reconciled")) ? "Accepted" : "Rejected");
+                    e.getIn().setBody(responseObject.toString());
                 })
                 .otherwise()
                 .log(LoggingLevel.INFO, "Request failed to sent to channel")
@@ -103,22 +111,24 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("mpesaTransactionId", paybillConfirmationRequestDTO.getTransactionID());
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
-                    logger.info("AMS Name : {}", amsName);
+                    logger.debug("AMS Name : {}", amsName);
                     String amsUrl = MpesaUtils.getAMSUrl(amsName);
                     e.setProperty("amsUrl", amsUrl);
                     e.setProperty("secondaryIdentifier", "MSISDN");
                     e.setProperty("secondaryIdentifierValue", paybillConfirmationRequestDTO.getMsisdn());
-                    ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillConfirmationRequestDTO, amsName);
-                    e.setProperty("PAYBILL_CONFIRMATION_REQUEST", obj);
+
+                    ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName);
+                    e.setProperty("PAYBILL_CONFIRMATION_REQUEST", obj.toString());
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
-                    variables.put("CHANNEL_REQUEST", e.getProperty("PAYBILL_CONFIRMATION_REQUEST"));
+                    variables.put(CHANNEL_REQUEST, obj.toString());
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = e.getProperty("mpesaTransactionId").toString();
                     String transactionId = hm.get(mpesaTransactionId);
                     logger.debug("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
+                    variables.put(TRANSACTION_ID, transactionId);
 
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
