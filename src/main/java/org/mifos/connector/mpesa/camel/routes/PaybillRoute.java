@@ -54,13 +54,14 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     PaybillRequestDTO paybillRequestDTO = e.getIn().getBody(PaybillRequestDTO.class);
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
+                    String currency = e.getIn().getHeader("currency", String.class);
                     logger.debug("AMS Name : {}", amsName);
                     //Channel URL
                     logger.debug("Channel URL : {}", channelUrl);
                     e.setProperty("channelUrl", channelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
-                    ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName);
+                    ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
                     return obj.toString();
                 })
                 .log("MPESA Request Body : ${body}")
@@ -111,13 +112,14 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("mpesaTransactionId", paybillConfirmationRequestDTO.getTransactionID());
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
+                    String currency = e.getIn().getHeader("currency", String.class);
                     logger.debug("AMS Name : {}", amsName);
                     String amsUrl = MpesaUtils.getAMSUrl(amsName);
                     e.setProperty("amsUrl", amsUrl);
                     e.setProperty("secondaryIdentifier", "MSISDN");
                     e.setProperty("secondaryIdentifierValue", paybillConfirmationRequestDTO.getMsisdn());
 
-                    ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName);
+                    ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("PAYBILL_CONFIRMATION_REQUEST", obj.toString());
 
                     Map<String, Object> variables = new HashMap<>();

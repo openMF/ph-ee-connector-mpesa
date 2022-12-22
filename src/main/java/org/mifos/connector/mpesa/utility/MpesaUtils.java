@@ -32,7 +32,7 @@ public class MpesaUtils {
     @Value("${roster.host}")
     private static String rosterHost;
 
-    public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName) {
+    public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName, String currency) {
         JSONObject payer = new JSONObject();
         JSONObject partyIdInfoPayer = new JSONObject();
         partyIdInfoPayer.put("partyIdType", "MSISDN");
@@ -52,7 +52,7 @@ public class MpesaUtils {
 
         JSONObject amount = new JSONObject();
         amount.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
-        amount.put("currency", "TZS");
+        amount.put("currency", currency);
 
         return new ChannelSettlementRequestDTO(payer, payee, amount);
     }
@@ -72,7 +72,7 @@ public class MpesaUtils {
         return null;
     }
 
-    public static ChannelRequestDTO convertPaybillPayloadToChannelPayload(PaybillRequestDTO paybillRequestDTO, String amsName) {
+    public static ChannelRequestDTO convertPaybillPayloadToChannelPayload(PaybillRequestDTO paybillRequestDTO, String amsName, String currency) {
         String foundationalId = "";
         String accountID = "";
         // Mapping primary and secondary Identifier
@@ -96,9 +96,9 @@ public class MpesaUtils {
         transactionId.put("key", "transactionId");
         transactionId.put("value", paybillRequestDTO.getTransactionID());
 
-        JSONObject currency = new JSONObject();
-        currency.put("key", "currency");
-        currency.put("value", "KES");
+        JSONObject currencyObj = new JSONObject();
+        currencyObj.put("key", "currency");
+        currencyObj.put("value", currency);
 
         JSONObject memo = new JSONObject();
         memo.put("key", "memo");
@@ -109,7 +109,7 @@ public class MpesaUtils {
         walletName.put("value", paybillRequestDTO.getMsisdn());
 
         customData.add(transactionId);
-        customData.add(currency);
+        customData.add(currencyObj);
         customData.add(memo);
         customData.add(walletName);
         ChannelRequestDTO channelRequestDTO = new ChannelRequestDTO();
