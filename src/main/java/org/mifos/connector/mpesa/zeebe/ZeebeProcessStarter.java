@@ -1,7 +1,6 @@
 package org.mifos.connector.mpesa.zeebe;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.response.ProcessInstanceEvent;
 import org.apache.camel.Exchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,22 +57,5 @@ public class ZeebeProcessStarter {
 
     private String generateTransactionId() {
         return UUID.randomUUID().toString();
-    }
-
-    public String startZeebeWorkflowPaybill(String workflowId, Map<String, Object> variables) {
-
-        String transactionId = generateTransactionId();
-        variables.put(ZeebeVariables.TRANSACTION_ID, transactionId);
-
-        logger.info("starting workflow HERE:");
-        ProcessInstanceEvent instance = zeebeClient.newCreateInstanceCommand()
-                .bpmnProcessId(workflowId)
-                .latestVersion()
-                .variables(variables)
-                .send()
-                .join();
-
-        logger.info("zeebee workflow instance from process {} started with transactionId {}, instance key: {}", workflowId, transactionId, instance.getProcessInstanceKey());
-        return transactionId;
     }
 }

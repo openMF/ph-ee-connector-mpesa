@@ -1,5 +1,6 @@
 package org.mifos.connector.mpesa.utility;
 
+import com.google.api.client.util.DateTime;
 import org.json.JSONObject;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,12 +19,14 @@ import java.util.Objects;
 
 @Component
 public class MpesaUtils {
-
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     @Autowired
     private MpesaAMSProp mpesaAMSProp;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    @Autowired
+    private MpesaPaybillProp mpesaPaybillProp;
 
+    List<MpesaPaybillProp.ShortCode> shortCodeList;
     private List<MpesaProps.MPESA> mpesa;
 
     private String process = "process";
@@ -32,11 +36,19 @@ public class MpesaUtils {
     @Value("${roster.host}")
     private static String rosterHost;
 
+    @PostConstruct
+    public List<MpesaPaybillProp.ShortCode> postConstruct() {
+        shortCodeList = mpesaPaybillProp.getShortCodeList();
+        return shortCodeList;
+    }
+
     public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName, String currency) {
         JSONObject payer = new JSONObject();
+
         JSONObject partyIdInfoPayer = new JSONObject();
         partyIdInfoPayer.put("partyIdType", "MSISDN");
         partyIdInfoPayer.put("partyIdentifier", paybillConfirmationRequestDTO.getMsisdn());
+
         payer.put("partyIdInfo", partyIdInfoPayer);
 
         JSONObject payee = new JSONObject();
@@ -73,22 +85,30 @@ public class MpesaUtils {
     }
 
     public static ChannelRequestDTO convertPaybillPayloadToChannelPayload(PaybillRequestDTO paybillRequestDTO, String amsName, String currency) {
-        String foundationalId = "";
-        String accountID = "";
+        String requestingOrganisationTransactionReference = paybillRequestDTO.getTransactionID();
+        String subtype = "inbound";
+        String type = "transfer";
+        String amount = paybillRequestDTO.getTransactionAmount();
+        String descriptionText = "Paybill inbound transfer";
+        String requestDate = new DateTime("yyyyMMdd_HHmmss").toString();
+
         // Mapping primary and secondary Identifier
-        JSONObject primaryIdentifier = new JSONObject();
+        List<JSONObject> payee = new ArrayList<>();
+        JSONObject payeeObj = new JSONObject();
         if (amsName.equalsIgnoreCase("paygops")) {
-            foundationalId = paybillRequestDTO.getBillRefNo();
-            primaryIdentifier.put("key", "foundationalId");
-            primaryIdentifier.put("value", foundationalId);
+            payeeObj.put("partyIdType", "foundationalId");
+            payeeObj.put("partyIdIdentifier", paybillRequestDTO.getBillRefNo());
+            payee.add(payeeObj);
         } else if (amsName.equalsIgnoreCase("roster")) {
-            accountID = paybillRequestDTO.getBillRefNo();
-            primaryIdentifier.put("key", "accountID");
-            primaryIdentifier.put("value", accountID);
+            payeeObj.put("partyIdType", "accountId");
+            payeeObj.put("partyIdIdentifier", paybillRequestDTO.getBillRefNo());
+            payee.add(payeeObj);
         }
-        JSONObject secondaryIdentifier = new JSONObject();
-        secondaryIdentifier.put("key", "MSISDN");
-        secondaryIdentifier.put("value", paybillRequestDTO.getMsisdn());
+        List<JSONObject> payer = new ArrayList<>();
+        JSONObject payerObj = new JSONObject();
+        payerObj.put("partyIdType", "MSISDN");
+        payerObj.put("partyIdIdentifier", paybillRequestDTO.getMsisdn());
+        payer.add(payerObj);
         // Mapping custom data
         List<JSONObject> customData = new ArrayList<>();
 
@@ -102,7 +122,7 @@ public class MpesaUtils {
 
         JSONObject memo = new JSONObject();
         memo.put("key", "memo");
-        memo.put("value", foundationalId);
+        memo.put("value", paybillRequestDTO.getBillRefNo());
 
         JSONObject walletName = new JSONObject();
         walletName.put("key", "wallet_name");
@@ -112,11 +132,19 @@ public class MpesaUtils {
         customData.add(currencyObj);
         customData.add(memo);
         customData.add(walletName);
+
         ChannelRequestDTO channelRequestDTO = new ChannelRequestDTO();
-        channelRequestDTO.setPrimaryIdentifier(primaryIdentifier);
-        channelRequestDTO.setSecondaryIdentifier(secondaryIdentifier);
+        channelRequestDTO.setRequestDate(requestDate);
+        channelRequestDTO.setRequestingOrganisationTransactionReference(requestingOrganisationTransactionReference);
+        channelRequestDTO.setType(type);
+        channelRequestDTO.setSubType(subtype);
+        channelRequestDTO.setAmount(amount);
+        channelRequestDTO.setDescriptionText(descriptionText);
+        channelRequestDTO.setPayee(payee);
+        channelRequestDTO.setPayer(payer);
         channelRequestDTO.setCustomData(customData);
 
+        System.out.println(String.valueOf(channelRequestDTO));
         return channelRequestDTO;
     }
 

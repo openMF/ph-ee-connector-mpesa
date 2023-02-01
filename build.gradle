@@ -36,6 +36,8 @@ dependencies {
     implementation 'com.auth0:java-jwt:3.18.3'
     implementation 'org.mifos:ph-ee-connector-common:1.1.0-SNAPSHOT'
     implementation 'com.google.api-client:google-api-client:1.32.2'
+    implementation "org.apache.camel:camel-spring-redis-starter:2.25.4"
+    implementation "org.springframework.boot:spring-boot-starter-data-redis:3.0.1"
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     testImplementation 'org.springframework.boot:spring-boot-starter-test:2.6.2'
