@@ -63,6 +63,22 @@ accounts:
       client-secret: ${ACCOUNTS_PAYGOPS_CLIENTSECRET:YzuGNoJxeub8ZC6d}
       api-host: ${ACCOUNTS_PAYGOPS_APIHOST:https://sandbox.safaricom.co.ke}
       pass-key: ${ACCOUNTS_PAYGOPS_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
+    - name: "tupande"
+      business-short-code: ${ACCOUNTS_TUPANDE_SHORTCODE:122344567}
+      till: ${ACCOUNTS_TUPANDE_TILL:1234567}
+      auth-host: ${ACCOUNTS_TUPANDE_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
+      client-key: ${ACCOUNTS_TUPANDE_CLIENTKEY:0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5}
+      client-secret: ${ACCOUNTS_TUPANDE_CLIENTSECRET:YzuGNoJxeub8ZC6d}
+      api-host: ${ACCOUNTS_TUPANDE_APIHOST:https://sandbox.safaricom.co.ke}
+      pass-key: ${ACCOUNTS_TUPANDE_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
+    - name: "erply"
+      business-short-code: ${ACCOUNTS_ERPLY_SHORTCODE:122344567}
+      till: ${ACCOUNTS_ERPLY_TILL:1234567}
+      auth-host: ${ACCOUNTS_ERPLY_AUTHHOST:https://sandbox.safaricom.co.ke/oauth/v1/generate}
+      client-key: ${ACCOUNTS_ERPLY_CLIENTKEY:0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5}
+      client-secret: ${ACCOUNTS_ERPLY_CLIENTSECRET:YzuGNoJxeub8ZC6d}
+      api-host: ${ACCOUNTS_ERPLY_APIHOST:https://sandbox.safaricom.co.ke}
+      pass-key: ${ACCOUNTS_ERPLY_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
     - name: "default"
       business-short-code: ${ACCOUNTS_ROSTER_SHORTCODE:9383028}
       till: ${ACCOUNTS_ROSTER_TILL:1234567}
