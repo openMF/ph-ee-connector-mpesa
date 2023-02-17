@@ -72,7 +72,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                 .process(e -> {
                     String paybillRequestBodyString = e.getIn().getBody(String.class);
                     JSONObject paybillRequest = new JSONObject(paybillRequestBodyString);
-                    logger.info("Paybill Request Body : {}", paybillRequestBodyString);
+                    logger.debug("Paybill Request Body : {}", paybillRequestBodyString);
                     logger.debug("Reconciled : {}", paybillRequest.getBoolean("reconciled"));
                     e.setProperty("MPESA_VALIDATION_WEBHOOK_SUCCESS", paybillRequest.getBoolean("reconciled"));
 
@@ -131,7 +131,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = e.getProperty("mpesaTransactionId").toString();
                     String transactionId = hm.get(mpesaTransactionId);
-                    logger.info("Workflow transaction id : {}", transactionId);
+                    logger.debug("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
 
@@ -142,7 +142,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                                 .timeToLive(Duration.ofMillis(300))
                                 .variables(variables)
                                 .send();
-                        logger.info("Published Variables");
+                        logger.debug("Published Variables");
                     } else {
                         logger.debug("No workflow of such transaction ID exists");
                     }
