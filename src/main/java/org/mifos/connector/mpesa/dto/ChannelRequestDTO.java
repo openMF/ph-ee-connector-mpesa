@@ -1,10 +1,14 @@
 package org.mifos.connector.mpesa.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 import org.json.JSONObject;
 
 import java.util.List;
 
+@Getter
+@Setter
 public class ChannelRequestDTO {
     @JsonProperty("primaryIdentifier")
     private JSONObject primaryIdentifier;
@@ -20,30 +24,6 @@ public class ChannelRequestDTO {
                 ", secondaryIdentifier:" + secondaryIdentifier +
                 ", customData:" + customData +
                 "}";
-    }
-
-    public JSONObject getPrimaryIdentifier() {
-        return primaryIdentifier;
-    }
-
-    public void setPrimaryIdentifier(JSONObject primaryIdentifier) {
-        this.primaryIdentifier = primaryIdentifier;
-    }
-
-    public JSONObject getSecondaryIdentifier() {
-        return secondaryIdentifier;
-    }
-
-    public void setSecondaryIdentifier(JSONObject secondaryIdentifier) {
-        this.secondaryIdentifier = secondaryIdentifier;
-    }
-
-    public List<JSONObject> getCustomData() {
-        return customData;
-    }
-
-    public void setCustomData(List<JSONObject> customData) {
-        this.customData = customData;
     }
 
     public ChannelRequestDTO() {
