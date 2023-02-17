@@ -34,7 +34,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
-
     private final String secondaryIdentifierName = "MSISDN";
     @Value("${timer}")
     private String timer;
@@ -54,13 +53,14 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     PaybillRequestDTO paybillRequestDTO = e.getIn().getBody(PaybillRequestDTO.class);
                     //Getting the ams name
                     String amsName = e.getIn().getHeader("amsName", String.class);
+                    String dfspId = e.getIn().getHeader("dfspId", String.class);
                     String currency = e.getIn().getHeader("currency", String.class);
-                    logger.debug("AMS Name : {}", amsName);
                     //Channel URL
                     logger.debug("Channel URL : {}", channelUrl);
                     e.setProperty("channelUrl", channelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
+                    e.setProperty("dfspId", dfspId);
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
                     return obj.toString();
                 })
@@ -79,12 +79,12 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("timer", timer);
                     variables.put("paybillRequestBody", paybillRequestBodyString);
-                    variables.put("validationFailed", !(paybillRequest.getBoolean("reconciled")));
+                    variables.put("partyLookupFailed", !(paybillRequest.getBoolean("reconciled")));
                     variables.put("confirmationReceived", false);
                     //Starting the paybill workflow
-                    String transactionId = zeebeProcessStarter.startZeebeWorkflowPaybill("paybill", variables);
-
                     String mpesaTransactionId = paybillRequest.getString("transaction_id");
+                    String dfspId = e.getIn().getHeader("dfspId").toString();
+                    String transactionId = zeebeProcessStarter.startZeebeWorkflowPaybill("mpesa_paybill-" + dfspId, variables);
                     // Storing the external txn id and workflow txn id
                     logger.debug("MPESA Txn ID :{}", mpesaTransactionId);
                     logger.debug("Txn ID :{}", transactionId);
@@ -121,10 +121,13 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
                     ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("PAYBILL_CONFIRMATION_REQUEST", obj.toString());
-
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
                     variables.put(CHANNEL_REQUEST, obj.toString());
+                    variables.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
+                    variables.put("accountId", paybillConfirmationRequestDTO.getBillRefNo());
+                    variables.put("originDate", paybillConfirmationRequestDTO.getTransactionTime());
+                    variables.put("phoneNumber", paybillConfirmationRequestDTO.getMsisdn());
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = e.getProperty("mpesaTransactionId").toString();
                     String transactionId = hm.get(mpesaTransactionId);
@@ -135,11 +138,11 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
                                 .messageName("pendingConfirmation")
-                                .correlationKey((String) transactionId)
+                                .correlationKey(transactionId)
                                 .timeToLive(Duration.ofMillis(300))
                                 .variables(variables)
                                 .send();
-                        logger.info("Published Variables");
+                        logger.debug("Published Variables");
                     } else {
                         logger.debug("No workflow of such transaction ID exists");
                     }
