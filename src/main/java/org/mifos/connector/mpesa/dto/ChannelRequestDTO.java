@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.json.JSONObject;
 
 import java.util.List;
@@ -37,29 +38,16 @@ import java.util.List;
 //    ]
 // }
 
-@NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
 public class ChannelRequestDTO {
-    @JsonProperty("requestingOrganisationTransactionReference")
-    private String requestingOrganisationTransactionReference;
-    @JsonProperty("subType")
-    private String subType;
-    @JsonProperty("type")
-    private String type;
-    @JsonProperty("amount")
-    private String amount;
-    @JsonProperty("currency")
-    private String currency;
-    @JsonProperty("descriptionText")
-    private String descriptionText;
-    @JsonProperty("requestDate")
-    private String requestDate;
+    @JsonProperty("primaryIdentifier")
+    private JSONObject primaryIdentifier;
+    @JsonProperty("secondaryIdentifier")
+    private JSONObject secondaryIdentifier;
     @JsonProperty("customData")
     private List<JSONObject> customData;
-    @JsonProperty("payer")
-    private List<JSONObject> payer;
-    @JsonProperty("payee")
-    private List<JSONObject> payee;
 }

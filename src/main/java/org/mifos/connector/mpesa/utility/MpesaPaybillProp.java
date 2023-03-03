@@ -7,7 +7,16 @@ import java.util.List;
 @ConfigurationProperties(prefix = "paybill")
 public class MpesaPaybillProp {
 
-    List<ShortCode> shortCodeList;
+    private List<MpesaPaybillProp.ShortCode> group;
+
+    public List<MpesaPaybillProp.ShortCode> getGroup() {
+        return group;
+    }
+
+    public void setGroup(List<MpesaPaybillProp.ShortCode> shortCodeGroup) {
+        this.group = shortCodeGroup;
+    }
+
     String currency;
     String accountHoldingInstitutionId;
 
@@ -19,11 +28,15 @@ public class MpesaPaybillProp {
         return accountHoldingInstitutionId;
     }
 
-    public List<ShortCode> getShortCodeList() {
-        return shortCodeList;
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
-    public static class ShortCode {
+    public void setAccountHoldingInstitutionId(String accountHoldingInstitutionId) {
+        this.accountHoldingInstitutionId = accountHoldingInstitutionId;
+    }
+
+    public class ShortCode {
         String businessShortCode;
         String ams;
 
