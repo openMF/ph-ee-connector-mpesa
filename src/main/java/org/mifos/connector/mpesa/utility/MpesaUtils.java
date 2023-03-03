@@ -93,7 +93,7 @@ public class MpesaUtils {
 
     @PostConstruct
     public List<MpesaPaybillProp.ShortCode> postConstruct() {
-        shortCodeList = mpesaPaybillProp.getShortCodeList();
+        shortCodeList = mpesaPaybillProp.getGroup();
         return shortCodeList;
     }
 
