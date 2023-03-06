@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -27,10 +26,6 @@ public class MpesaUtils {
     @Autowired
     private MpesaAMSProp mpesaAMSProp;
 
-    @Autowired
-    private MpesaPaybillProp mpesaPaybillProp;
-
-    List<MpesaPaybillProp.ShortCode> shortCodeList;
     private List<MpesaProps.MPESA> mpesa;
 
     private String process = "process";
@@ -39,6 +34,11 @@ public class MpesaUtils {
     private String paygopsHost;
     @Value("${roster.host}")
     private String rosterHost;
+
+    enum ams {
+        paygops,
+        roster;
+    }
 
     public GsmaTransfer createGsmaTransferDTO(JSONObject paybillResponseBodyString) {
         GsmaTransfer gsmaTransfer = new GsmaTransfer();
@@ -91,12 +91,6 @@ public class MpesaUtils {
         return formatter.format(date);
     }
 
-    @PostConstruct
-    public List<MpesaPaybillProp.ShortCode> postConstruct() {
-        shortCodeList = mpesaPaybillProp.getGroup();
-        return shortCodeList;
-    }
-
     public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName, String currency) {
         JSONObject payer = new JSONObject();
 
@@ -122,11 +116,6 @@ public class MpesaUtils {
         amount.put("currency", currency);
 
         return new ChannelSettlementRequestDTO(payer, payee, amount);
-    }
-
-    enum ams {
-        paygops,
-        roster;
     }
 
     public String getAMSUrl(String amsName) {
@@ -220,7 +209,6 @@ public class MpesaUtils {
         }
         return properties;
     }
-
 
     public void setProcess(String process) {
         logger.info("Process Value being set");

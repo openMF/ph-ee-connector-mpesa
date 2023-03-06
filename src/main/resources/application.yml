@@ -90,14 +90,15 @@ accounts:
 
 paybill:
   groups:
+    - business-short-code: 24322607
+      ams: "paygops"
     - business-short-code: 123456
       ams: "roster"
-    - business-short-code: 654321
-      ams: "paygops"
     - business-short-code: "default"
       ams: "paygops"
-  currency: "KES"
-  accountHoldingInstitutionId: "lion"
+
+currency: "KES"
+accountHoldingInstitutionId: "lion"
 
 management:
   endpoint:
