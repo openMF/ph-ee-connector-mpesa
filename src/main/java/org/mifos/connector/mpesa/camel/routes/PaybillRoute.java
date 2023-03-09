@@ -1,5 +1,7 @@
 package org.mifos.connector.mpesa.camel.routes;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -27,6 +29,7 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION
 @Component
 public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private ObjectMapper objectMapper = new ObjectMapper();
     @Autowired
     private ZeebeClient zeebeClient;
     @Value("${channel.host}")
@@ -37,6 +40,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private String accountHoldingInstitutionId;
     @Autowired
     private MpesaUtils mpesaUtils;
+    private final String secondaryIdentifierName = "MSISDN";
     //    private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
@@ -57,11 +61,18 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
                     e.getIn().setHeader("amsUrl", amsUrl);
                     e.getIn().setHeader("amsName", amsName);
-                    e.getIn().setHeader("dfspId", accountHoldingInstitutionId);
+                    e.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
                     e.setProperty("channelUrl", channelUrl);
-
+                    e.setProperty("secondaryIdentifier", secondaryIdentifierName);
+                    e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
-                    return obj.toString();
+                    String channelRequestDTO = null;
+                    try {
+                        channelRequestDTO = objectMapper.writeValueAsString(obj);
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    return channelRequestDTO;
                 })
                 .log("MPESA Request Body : ${body}")
                 .toD("${header.channelUrl}" + "/accounts/validate/${header.secondaryIdentifier}/${header.secondaryIdentifierValue}" + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
@@ -72,7 +83,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.debug("Paybill Response Body : {}", paybillResponseBodyString);
                     logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
-                    e.getIn().setHeader("accountHoldingInstitutionId", paybillResponse.getString("dfspId"));
+                    e.getIn().setHeader("accountHoldingInstitutionId", paybillResponse.getString("accountHoldingInstitutionId"));
                     e.getIn().setHeader("amsName", paybillResponse.getString("amsName"));
                     e.getIn().setHeader("reconciled", paybillResponse.getBoolean("reconciled"));
                     e.getIn().setHeader("mpesaTxnId", paybillResponse.getString("transactionId"));
@@ -87,8 +98,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
                     Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());
                     // Storing in redis
-                    String key = channelResponse.getString("transactionId");
-                    String value = mpesaTxnId;
+                    String value = channelResponse.getString("transactionId");
+                    String key = mpesaTxnId;
 //                    redisTemplate.opsForValue().set(key, value);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);

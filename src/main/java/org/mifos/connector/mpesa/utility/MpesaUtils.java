@@ -7,6 +7,7 @@ import org.mifos.connector.common.gsma.dto.Party;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
+import org.mifos.connector.mpesa.dto.PrimarySecondaryIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -132,41 +133,41 @@ public class MpesaUtils {
         String foundationalId = "";
         String accountID = "";
         // Mapping primary and secondary Identifier
-        JSONObject primaryIdentifier = new JSONObject();
+        PrimarySecondaryIdentifier primaryIdentifier = new PrimarySecondaryIdentifier();
         if (amsName.equalsIgnoreCase("paygops")) {
             foundationalId = paybillRequestDTO.getBillRefNo();
-            primaryIdentifier.put("key", "foundationalId");
-            primaryIdentifier.put("value", foundationalId);
+            primaryIdentifier.setKey("foundationalId");
+            primaryIdentifier.setValue(foundationalId);
         } else if (amsName.equalsIgnoreCase("roster")) {
             accountID = paybillRequestDTO.getBillRefNo();
-            primaryIdentifier.put("key", "accountID");
-            primaryIdentifier.put("value", accountID);
+            primaryIdentifier.setKey("accountID");
+            primaryIdentifier.setValue(accountID);
         }
-        JSONObject secondaryIdentifier = new JSONObject();
-        secondaryIdentifier.put("key", "MSISDN");
-        secondaryIdentifier.put("value", paybillRequestDTO.getMsisdn());
+        PrimarySecondaryIdentifier secondaryIdentifier = new PrimarySecondaryIdentifier();
+        secondaryIdentifier.setKey("MSISDN");
+        secondaryIdentifier.setValue(paybillRequestDTO.getMsisdn());
         // Mapping custom data
-        List<JSONObject> customData = new ArrayList<>();
+        List<CustomData> customData = new ArrayList<>();
 
-        JSONObject transactionId = new JSONObject();
-        transactionId.put("key", "transactionId");
-        transactionId.put("value", paybillRequestDTO.getTransactionID());
+        CustomData transactionId = new CustomData();
+        transactionId.setKey("transactionId");
+        transactionId.setValue(paybillRequestDTO.getTransactionID());
 
-        JSONObject currencyObj = new JSONObject();
-        currencyObj.put("key", "currency");
-        currencyObj.put("value", currency);
+        CustomData currencyObj = new CustomData();
+        currencyObj.setKey("currency");
+        currencyObj.setValue(currency);
 
-        JSONObject memo = new JSONObject();
-        memo.put("key", "memo");
-        memo.put("value", foundationalId);
+        CustomData memo = new CustomData();
+        memo.setKey("memo");
+        memo.setValue(foundationalId);
 
-        JSONObject walletName = new JSONObject();
-        walletName.put("key", "wallet_name");
-        walletName.put("value", paybillRequestDTO.getMsisdn());
+        CustomData walletName = new CustomData();
+        walletName.setKey("wallet_name");
+        walletName.setValue(paybillRequestDTO.getMsisdn());
 
-        JSONObject amount = new JSONObject();
-        amount.put("key", "amount");
-        amount.put("value", paybillRequestDTO.getTransactionAmount());
+        CustomData amount = new CustomData();
+        amount.setKey("amount");
+        amount.setValue(paybillRequestDTO.getTransactionAmount());
 
         customData.add(transactionId);
         customData.add(currencyObj);

@@ -97,8 +97,8 @@ paybill:
     - business-short-code: "default"
       ams: "paygops"
 
-currency: "KES"
-accountHoldingInstitutionId: "lion"
+currency: "USD"
+accountHoldingInstitutionId: "gorilla"
 
 management:
   endpoint:

@@ -6,37 +6,42 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.json.JSONObject;
+import org.mifos.connector.common.gsma.dto.CustomData;
 
 import java.util.List;
 
 //{
-//        "requestingOrganisationTransactionReference": "string",
-//        "subType": "inbound",
-//        "type": "transfer",
-//        "amount": "15.21",
-//        "currency": "AED",
-//        "descriptionText": "string",
-//        "requestDate": "2022-09-28T12:51:19.260+00:00",
+//        "primaryIdentifier": {
+//        "key": "foundationalID",
+//        "value": "24322607"
+//        },
+//        "secondaryIdentifier": {
+//        "key": "MSISDN",
+//        "value": "254797668592"
+//        },
 //        "customData": [
-//            {
-//            "key": "string",
-//            "value": "string"
-//            }
-//            ],
-//            "payer": [
-//            {
-//            "partyIdType": "msisdn",
-//            "partyIdIdentifier": "+33555123456"
-//            }
-//            ],
-//            "payee": [
-//            {
-//            "partyIdType": "accountid",
-//            "partyIdIdentifier": "L7741025618"
-//            }
-//    ]
-// }
+//        {
+//        "key": "transactionId",
+//        "value": "670d65bd-4efd-4a6c-ae2c-7fdaa8cb4d60"
+//        },
+//        {
+//        "key": "currency",
+//        "value": "KES"
+//        },
+//        {
+//        "key": "memo",
+//        "value": "24322607"
+//        },
+//        {
+//        "key": "wallet_name",
+//        "value": "254797668592"
+//        },
+//        {
+//        "key": "amount",
+//        "value": "11"
+//        }
+//        ]
+//        }
 
 @Getter
 @Setter
@@ -45,9 +50,9 @@ import java.util.List;
 @ToString
 public class ChannelRequestDTO {
     @JsonProperty("primaryIdentifier")
-    private JSONObject primaryIdentifier;
+    private PrimarySecondaryIdentifier primaryIdentifier;
     @JsonProperty("secondaryIdentifier")
-    private JSONObject secondaryIdentifier;
+    private PrimarySecondaryIdentifier secondaryIdentifier;
     @JsonProperty("customData")
-    private List<JSONObject> customData;
+    private List<CustomData> customData;
 }

@@ -21,11 +21,9 @@ public class MpesaPaybillProp {
     }
 
     public String getAMSFromShortCode(String bussinessShortCode) {
-        System.out.println("bussinessShortCode : " + bussinessShortCode);
         String amsName = getGroups().stream()
                 .filter(p -> p.getBusinessShortCode().equalsIgnoreCase(bussinessShortCode))
                 .findFirst().get().getAms();
-        System.out.println("Group: " + amsName);
         return amsName;
     }
 }
