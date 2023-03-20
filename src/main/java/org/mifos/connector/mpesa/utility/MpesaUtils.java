@@ -7,7 +7,6 @@ import org.mifos.connector.common.gsma.dto.Party;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
-import org.mifos.connector.mpesa.dto.PrimarySecondaryIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.AMOUNT;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CURRENCY;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.MEMO;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.WALLET_NAME;
 
 
 @Component
@@ -33,6 +38,7 @@ public class MpesaUtils {
 
     @Value("${paygops.host}")
     private String paygopsHost;
+
     @Value("${roster.host}")
     private String rosterHost;
 
@@ -86,7 +92,7 @@ public class MpesaUtils {
         return customData;
     }
 
-    private String getCurrentDateTime() {
+    public static String getCurrentDateTime() {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
         Date date = new Date();
         return formatter.format(date);
@@ -133,7 +139,7 @@ public class MpesaUtils {
         String foundationalId = "";
         String accountID = "";
         // Mapping primary and secondary Identifier
-        PrimarySecondaryIdentifier primaryIdentifier = new PrimarySecondaryIdentifier();
+        CustomData primaryIdentifier = new CustomData();
         if (amsName.equalsIgnoreCase("paygops")) {
             foundationalId = paybillRequestDTO.getBillRefNo();
             primaryIdentifier.setKey("foundationalId");
@@ -143,37 +149,11 @@ public class MpesaUtils {
             primaryIdentifier.setKey("accountID");
             primaryIdentifier.setValue(accountID);
         }
-        PrimarySecondaryIdentifier secondaryIdentifier = new PrimarySecondaryIdentifier();
+        CustomData secondaryIdentifier = new CustomData();
         secondaryIdentifier.setKey("MSISDN");
         secondaryIdentifier.setValue(paybillRequestDTO.getMsisdn());
         // Mapping custom data
-        List<CustomData> customData = new ArrayList<>();
-
-        CustomData transactionId = new CustomData();
-        transactionId.setKey("transactionId");
-        transactionId.setValue(paybillRequestDTO.getTransactionID());
-
-        CustomData currencyObj = new CustomData();
-        currencyObj.setKey("currency");
-        currencyObj.setValue(currency);
-
-        CustomData memo = new CustomData();
-        memo.setKey("memo");
-        memo.setValue(foundationalId);
-
-        CustomData walletName = new CustomData();
-        walletName.setKey("wallet_name");
-        walletName.setValue(paybillRequestDTO.getMsisdn());
-
-        CustomData amount = new CustomData();
-        amount.setKey("amount");
-        amount.setValue(paybillRequestDTO.getTransactionAmount());
-
-        customData.add(transactionId);
-        customData.add(currencyObj);
-        customData.add(memo);
-        customData.add(walletName);
-        customData.add(amount);
+        List<CustomData> customData = setCustomDataChannelRequest(paybillRequestDTO, currency, foundationalId);
 
         ChannelRequestDTO channelRequestDTO = new ChannelRequestDTO();
         channelRequestDTO.setPrimaryIdentifier(primaryIdentifier);
@@ -181,6 +161,37 @@ public class MpesaUtils {
         channelRequestDTO.setCustomData(customData);
 
         return channelRequestDTO;
+    }
+
+    private static List<CustomData> setCustomDataChannelRequest(PaybillRequestDTO paybillRequestDTO, String currency, String foundationalId) {
+        List<CustomData> customData = new ArrayList<>();
+
+        CustomData transactionId = new CustomData();
+        transactionId.setKey(TRANSACTION_ID);
+        transactionId.setValue(paybillRequestDTO.getTransactionID());
+
+        CustomData currencyObj = new CustomData();
+        currencyObj.setKey(CURRENCY);
+        currencyObj.setValue(currency);
+
+        CustomData memo = new CustomData();
+        memo.setKey(MEMO);
+        memo.setValue(foundationalId);
+
+        CustomData walletName = new CustomData();
+        walletName.setKey(WALLET_NAME);
+        walletName.setValue(paybillRequestDTO.getMsisdn());
+
+        CustomData amount = new CustomData();
+        amount.setKey(AMOUNT);
+        amount.setValue(paybillRequestDTO.getTransactionAmount());
+
+        customData.add(transactionId);
+        customData.add(currencyObj);
+        customData.add(memo);
+        customData.add(walletName);
+        customData.add(amount);
+        return customData;
     }
 
     public String getProcess() {

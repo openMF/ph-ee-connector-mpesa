@@ -28,4 +28,8 @@ public class CamelProperties {
     public static final String LAST_RESPONSE_BODY = "lastResponseBody";
     public static final String DEPLOYED_PROCESS = "deployedProcess";
     public static final String CUSTOM_HEADER_FILTER_STRATEGY = "customHeaderFilterStrategy";
+    public static final String CURRENCY = "currency";
+    public static final String MEMO = "memo";
+    public static final String WALLET_NAME = "wallet_name";
+    public static final String AMOUNT = "amount";
 }

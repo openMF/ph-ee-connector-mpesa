@@ -70,13 +70,11 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
-                    String channelRequestDTO = null;
                     try {
-                        channelRequestDTO = objectMapper.writeValueAsString(obj);
+                        return objectMapper.writeValueAsString(obj);
                     } catch (JsonProcessingException ex) {
                         throw new RuntimeException(ex);
                     }
-                    return channelRequestDTO;
                 })
                 .log("MPESA Request Body : ${body}")
                 .toD("${header.channelUrl}" + "/accounts/validate/${header.secondaryIdentifier}/${header.secondaryIdentifierValue}" + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
