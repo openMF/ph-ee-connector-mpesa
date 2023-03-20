@@ -9,6 +9,15 @@ import java.util.List;
 @Component
 @ConfigurationProperties(prefix = "paybill")
 public class MpesaPaybillProp {
+    private String accountHoldingInstitutionId;
+
+    public String getAccountHoldingInstitutionId() {
+        return accountHoldingInstitutionId;
+    }
+
+    public void setAccountHoldingInstitutionId(String accountHoldingInstitutionId) {
+        this.accountHoldingInstitutionId = accountHoldingInstitutionId;
+    }
 
     private List<ShortCodeAms> groups = new ArrayList<>();
 

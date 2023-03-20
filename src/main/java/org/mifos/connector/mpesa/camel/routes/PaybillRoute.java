@@ -38,8 +38,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private String channelUrl;
     @Value("${channelCamel.host}")
     private String channelCamelUrl;
-    @Value("${accountHoldingInstitutionId}")
-    private String accountHoldingInstitutionId;
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
@@ -62,6 +60,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String amsName = mpesaPaybillProp.getAMSFromShortCode(businessShortCode);
                     String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
                     String amsUrl = mpesaUtils.getAMSUrl(amsName);
+                    String accountHoldingInstitutionId = mpesaPaybillProp.getAccountHoldingInstitutionId();
 
                     e.getIn().setHeader("amsUrl", amsUrl);
                     e.getIn().setHeader("amsName", amsName);

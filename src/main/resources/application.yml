@@ -93,15 +93,14 @@ accounts:
       pass-key: ${ACCOUNTS_ROSTER_PASSKEY:bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919}
 
 paybill:
+  accountHoldingInstitutionId: "default"
   groups:
     - business-short-code: 24322607
       ams: "paygops"
       currency: "KES"
-    - business-short-code: 123456
+    - business-short-code: 12345678
       ams: "roster"
       currency: "KES"
-
-accountHoldingInstitutionId: "gorilla"
 
 management:
   endpoint:
