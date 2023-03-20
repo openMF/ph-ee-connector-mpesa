@@ -6,9 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.camel.Processor;
+import org.mifos.connector.mpesa.camel.config.CustomHeaderFilterStrategy;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
 
 @SpringBootApplication
 public class MpesaConnectorApplication {
@@ -27,6 +30,11 @@ public class MpesaConnectorApplication {
     @Bean
     public Processor pojoToString(ObjectMapper objectMapper) {
         return exchange -> exchange.getIn().setBody(objectMapper.writeValueAsString(exchange.getIn().getBody()));
+    }
+
+    @Bean(CUSTOM_HEADER_FILTER_STRATEGY)
+    public CustomHeaderFilterStrategy headerFilterStrategy() {
+        return new CustomHeaderFilterStrategy();
     }
 
     public static void main(String[] args) {

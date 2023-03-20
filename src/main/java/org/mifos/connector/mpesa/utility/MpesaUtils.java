@@ -62,7 +62,7 @@ public class MpesaUtils {
         gsmaTransfer.setCustomData(customData);
         gsmaTransfer.setRequestDate(currentDateTime);
         gsmaTransfer.setPayee(payeeObj);
-        gsmaTransfer.setPayer(payeeObj);
+        gsmaTransfer.setPayer(payerObj);
         gsmaTransfer.setSubType("inbound");
         gsmaTransfer.setType("transfer");
         gsmaTransfer.setDescriptionText("description");

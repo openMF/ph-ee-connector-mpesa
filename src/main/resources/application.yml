@@ -22,11 +22,15 @@ zeebe:
 timer: "PT30S"
 
 channel:
-  host: "http://localhost:5001"
+  host: "http://localhost:8081"
 paygops:
   host: "http://localhost:5002"
 roster:
   host: "http://localhost:5004"
+
+redis:
+  host: "https://localhost"
+  port: "6379"
 
 operations:
   host: http://ph-ee-operations-app
@@ -92,12 +96,11 @@ paybill:
   groups:
     - business-short-code: 24322607
       ams: "paygops"
+      currency: "KES"
     - business-short-code: 123456
       ams: "roster"
-    - business-short-code: "default"
-      ams: "paygops"
+      currency: "KES"
 
-currency: "USD"
 accountHoldingInstitutionId: "gorilla"
 
 management:

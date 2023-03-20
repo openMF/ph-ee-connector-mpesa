@@ -3,6 +3,15 @@ package org.mifos.connector.mpesa.utility;
 public class ShortCodeAms {
     String businessShortCode;
     String ams;
+    String currency;
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
 
     public String getBusinessShortCode() {
         return this.businessShortCode;
@@ -18,13 +27,5 @@ public class ShortCodeAms {
 
     public void setAms(String ams) {
         this.ams = ams;
-    }
-
-    public String getDefaultAms() {
-        String ams = null;
-        if (getBusinessShortCode().equals("default")) {
-            ams = getAms();
-        }
-        return ams;
     }
 }

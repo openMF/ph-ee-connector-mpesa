@@ -2,7 +2,8 @@ package org.mifos.connector.mpesa.camel.config;
 
 public class CamelProperties {
 
-    public CamelProperties() {}
+    public CamelProperties() {
+    }
 
     public static final String BUY_GOODS_REQUEST_BODY = "buyGoodsRequestBody";
     public static final String BUY_GOODS_TRANSACTION_STATUS_BODY = "buyGoodsTransactionStatusBody";
@@ -26,4 +27,5 @@ public class CamelProperties {
     public static final String IS_ERROR_RECOVERABLE = "isErrorRecoverable";
     public static final String LAST_RESPONSE_BODY = "lastResponseBody";
     public static final String DEPLOYED_PROCESS = "deployedProcess";
+    public static final String CUSTOM_HEADER_FILTER_STRATEGY = "customHeaderFilterStrategy";
 }

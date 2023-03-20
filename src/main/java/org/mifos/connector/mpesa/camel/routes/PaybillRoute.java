@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CHANNEL_REQUEST;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 
 @Component
@@ -34,16 +36,17 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
-    @Value("${currency}")
-    private String currency;
+    @Value("${channelCamel.host}")
+    private String channelCamelUrl;
     @Value("${accountHoldingInstitutionId}")
     private String accountHoldingInstitutionId;
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
-    //    private RedisTemplate<String, String> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
+
 
     @Override
     public void configure() {
@@ -57,12 +60,13 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     //Getting the ams name
                     String businessShortCode = paybillRequestDTO.getShortCode();
                     String amsName = mpesaPaybillProp.getAMSFromShortCode(businessShortCode);
+                    String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
                     String amsUrl = mpesaUtils.getAMSUrl(amsName);
 
                     e.getIn().setHeader("amsUrl", amsUrl);
                     e.getIn().setHeader("amsName", amsName);
                     e.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
-                    e.setProperty("channelUrl", channelUrl);
+                    e.setProperty("channelUrl", channelCamelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
@@ -83,24 +87,36 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.debug("Paybill Response Body : {}", paybillResponseBodyString);
                     logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
+                    e.getIn().removeHeaders("*");
                     e.getIn().setHeader("accountHoldingInstitutionId", paybillResponse.getString("accountHoldingInstitutionId"));
                     e.getIn().setHeader("amsName", paybillResponse.getString("amsName"));
+                    e.getIn().setHeader("Platform-TenantId", paybillResponse.getString("accountHoldingInstitutionId"));
+                    e.getIn().setHeader("X-CorrelationID", "12345678-6897-6798-6798-098765432134");
                     e.getIn().setHeader("reconciled", paybillResponse.getBoolean("reconciled"));
                     e.getIn().setHeader("mpesaTxnId", paybillResponse.getString("transactionId"));
+                    e.getIn().setHeader("Content-Type", "application/json");
                     e.setProperty("channelUrl", channelUrl);
-                    return gsmaTransfer.toString();
+                    String gsmaTransferDTO = null;
+                    try {
+                        gsmaTransferDTO = objectMapper.writeValueAsString(gsmaTransfer);
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    return gsmaTransferDTO;
                 })
-                .toD("${header.channelUrl}" + "/channel/gsma/transaction}" + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD("${header.channelUrl}" + "/channel/gsma/transaction" + "?bridgeEndpoint=true&throwExceptionOnFailure=false" +
+                        "&headerFilterStrategy=#" + CUSTOM_HEADER_FILTER_STRATEGY)
                 .process(e -> {
                     // Setting mpesa specifc response
                     String channelResponseBodyString = e.getIn().getBody(String.class);
+                    logger.info("channelResponseBodyString:{}", channelResponseBodyString);
                     JSONObject channelResponse = new JSONObject(channelResponseBodyString);
                     String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
                     Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());
                     // Storing in redis
                     String value = channelResponse.getString("transactionId");
                     String key = mpesaTxnId;
-//                    redisTemplate.opsForValue().set(key, value);
+                    redisTemplate.opsForValue().set(key, value);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -117,6 +133,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     //Getting the ams name
                     String businessShortCode = paybillConfirmationRequestDTO.getShortCode();
                     String amsName = mpesaPaybillProp.getAMSFromShortCode(businessShortCode);
+                    String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
                     String amsUrl = mpesaUtils.getAMSUrl(amsName);
 
                     e.setProperty("amsUrl", amsUrl);
@@ -125,6 +142,9 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
                     ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
+                    //Getting mpesa and workflow transaction id
+                    String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
+                    String transactionId = redisTemplate.opsForValue().get(mpesaTransactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
@@ -133,11 +153,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     variables.put("accountId", paybillConfirmationRequestDTO.getBillRefNo());
                     variables.put("originDate", paybillConfirmationRequestDTO.getTransactionTime());
                     variables.put("phoneNumber", paybillConfirmationRequestDTO.getMsisdn());
-                    //Getting mpesa and workflow transaction id
-                    String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
-                    String transactionId = "";/*redisTemplate.opsForValue().get(mpesaTransactionId);*/
-
-                    logger.debug("Workflow transaction id : {}", transactionId);
+                    logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
 

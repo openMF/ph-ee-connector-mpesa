@@ -20,10 +20,17 @@ public class MpesaPaybillProp {
         this.groups = shortCodeGroup;
     }
 
-    public String getAMSFromShortCode(String bussinessShortCode) {
+    public String getAMSFromShortCode(String businessShortCode) {
         String amsName = getGroups().stream()
-                .filter(p -> p.getBusinessShortCode().equalsIgnoreCase(bussinessShortCode))
+                .filter(p -> p.getBusinessShortCode().equalsIgnoreCase(businessShortCode))
                 .findFirst().get().getAms();
         return amsName;
+    }
+
+    public String getCurrencyFromShortCode(String businessShortCode) {
+        String currency = getGroups().stream()
+                .filter(p -> p.getBusinessShortCode().equalsIgnoreCase(businessShortCode))
+                .findFirst().get().getCurrency();
+        return currency;
     }
 }
