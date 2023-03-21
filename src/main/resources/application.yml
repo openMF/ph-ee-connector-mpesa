@@ -95,12 +95,12 @@ accounts:
 paybill:
   accountHoldingInstitutionId: "default"
   groups:
-    - business-short-code: 24322607
+    - business-short-code: ${ACCOUNTS_PAYGOPS_PAYBILL_SHORTCODE:24322607}
       ams: "paygops"
-      currency: "KES"
-    - business-short-code: 12345678
+      currency: ${ACCOUNTS_PAYGOPS_CURRENCY:KES}
+    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:24322607}
       ams: "roster"
-      currency: "KES"
+      currency: ${ACCOUNTS_ROSTER_CURRENCY:KES}
 
 management:
   endpoint:
