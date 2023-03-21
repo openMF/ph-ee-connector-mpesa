@@ -24,8 +24,15 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.ACCOUNT_HOLDING_INSTITUTION_ID;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.AMS_NAME;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CHANNEL_REQUEST;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CLIENT_CORRELATION_ID;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.MPESA_TXN_ID;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.RECONCILED;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 
 @Component
@@ -36,8 +43,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
-    @Value("${channelCamel.host}")
-    private String channelCamelUrl;
+    @Value("${paybill.clientCorrelationId}")
+    private String clientCorrelationId;
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
@@ -65,7 +72,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.getIn().setHeader("amsUrl", amsUrl);
                     e.getIn().setHeader("amsName", amsName);
                     e.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
-                    e.setProperty("channelUrl", channelCamelUrl);
+                    e.setProperty("channelUrl", channelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
@@ -85,13 +92,13 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
                     e.getIn().removeHeaders("*");
-                    e.getIn().setHeader("accountHoldingInstitutionId", paybillResponse.getString("accountHoldingInstitutionId"));
-                    e.getIn().setHeader("amsName", paybillResponse.getString("amsName"));
-                    e.getIn().setHeader("Platform-TenantId", paybillResponse.getString("accountHoldingInstitutionId"));
-                    e.getIn().setHeader("X-CorrelationID", "12345678-6897-6798-6798-098765432134");
-                    e.getIn().setHeader("reconciled", paybillResponse.getBoolean("reconciled"));
-                    e.getIn().setHeader("mpesaTxnId", paybillResponse.getString("transactionId"));
-                    e.getIn().setHeader("Content-Type", "application/json");
+                    e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
+                    e.getIn().setHeader(AMS_NAME, paybillResponse.getString(AMS_NAME));
+                    e.getIn().setHeader(TENANT_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
+                    e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
+                    e.getIn().setHeader(RECONCILED, paybillResponse.getBoolean(RECONCILED));
+                    e.getIn().setHeader(MPESA_TXN_ID, paybillResponse.getString("transactionId"));
+                    e.getIn().setHeader("Content-Type", CONTENT_TYPE);
                     e.setProperty("channelUrl", channelUrl);
                     String gsmaTransferDTO = null;
                     try {
@@ -106,7 +113,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                 .process(e -> {
                     // Setting mpesa specifc response
                     String channelResponseBodyString = e.getIn().getBody(String.class);
-                    logger.info("channelResponseBodyString:{}", channelResponseBodyString);
+                    logger.debug("channelResponseBodyString:{}", channelResponseBodyString);
                     JSONObject channelResponse = new JSONObject(channelResponseBodyString);
                     String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
                     Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());

@@ -22,7 +22,7 @@ zeebe:
 timer: "PT30S"
 
 channel:
-  host: "http://localhost:8081"
+  host: "http://localhost:8080"
 paygops:
   host: "http://localhost:5002"
 roster:
@@ -94,6 +94,7 @@ accounts:
 
 paybill:
   accountHoldingInstitutionId: "default"
+  clientCorrelationId: "12345678-6897-6798-6798-098765432134"
   groups:
     - business-short-code: ${ACCOUNTS_PAYGOPS_PAYBILL_SHORTCODE:24322607}
       ams: "paygops"
