@@ -34,7 +34,8 @@ public class CamelProperties {
     public static final String AMOUNT = "amount";
     public static final String AMS_NAME = "amsName";
     public static final String TENANT_ID = "Platform-TenantId";
-    public static final String CONTENT_TYPE = "application/json";
+    public static final String CONTENT_TYPE_VAL = "application/json";
+    public static final String CONTENT_TYPE = "Content-Type";
     public static final String RECONCILED = "reconciled";
     public static final String MPESA_TXN_ID = "mpesaTxnId";
     public static final String CLIENT_CORRELATION_ID = "X-CorrelationID";

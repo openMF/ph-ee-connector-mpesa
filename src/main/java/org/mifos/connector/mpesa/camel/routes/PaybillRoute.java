@@ -29,6 +29,7 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.AMS_NAME;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CHANNEL_REQUEST;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CLIENT_CORRELATION_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE_VAL;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.MPESA_TXN_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.RECONCILED;
@@ -43,8 +44,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private ZeebeClient zeebeClient;
     @Value("${channel.host}")
     private String channelUrl;
-    @Value("${paybill.clientCorrelationId}")
-    private String clientCorrelationId;
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
@@ -95,10 +94,10 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
                     e.getIn().setHeader(AMS_NAME, paybillResponse.getString(AMS_NAME));
                     e.getIn().setHeader(TENANT_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
-                    e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
+                    e.getIn().setHeader(CLIENT_CORRELATION_ID, paybillResponse.getString("transactionId"));
                     e.getIn().setHeader(RECONCILED, paybillResponse.getBoolean(RECONCILED));
                     e.getIn().setHeader(MPESA_TXN_ID, paybillResponse.getString("transactionId"));
-                    e.getIn().setHeader("Content-Type", CONTENT_TYPE);
+                    e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
                     e.setProperty("channelUrl", channelUrl);
                     String gsmaTransferDTO = null;
                     try {

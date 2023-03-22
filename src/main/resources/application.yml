@@ -94,7 +94,6 @@ accounts:
 
 paybill:
   accountHoldingInstitutionId: "default"
-  clientCorrelationId: "12345678-6897-6798-6798-098765432134"
   groups:
     - business-short-code: ${ACCOUNTS_PAYGOPS_PAYBILL_SHORTCODE:24322607}
       ams: "paygops"
