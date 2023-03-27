@@ -47,7 +47,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final String secondaryIdentifierName = "MSISDN";
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
-    private static HashMap<String, String> mpesaTxnIdStore = new HashMap<>();
+    private static HashMap<String, Boolean> reconciledStore = new HashMap<>();
+    private static HashMap<String, String> workflowInstanceStore = new HashMap<>();
 
     @Override
     public void configure() {
@@ -92,7 +93,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     Boolean reconciled = paybillResponse.getBoolean(RECONCILED);
                     String mpesaTxnId = paybillResponse.getString("transactionId");
                     String clientCorrelationId = mpesaTxnId;
-                    mpesaTxnIdStore.put(clientCorrelationId, String.valueOf(reconciled));
+                    reconciledStore.put(clientCorrelationId, reconciled);
 
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
                     e.getIn().removeHeaders("*");
@@ -120,9 +121,9 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String workflowInstanceKey = channelResponse.getString("transactionId");
 
                     String clientCorrelationId = e.getIn().getHeader(CLIENT_CORRELATION_ID).toString();
-                    Boolean reconciled = Boolean.valueOf(mpesaTxnIdStore.get(clientCorrelationId));
+                    Boolean reconciled = reconciledStore.get(clientCorrelationId);
                     // Storing the key value
-                    mpesaTxnIdStore.put(clientCorrelationId, workflowInstanceKey);
+                    workflowInstanceStore.put(clientCorrelationId, workflowInstanceKey);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -150,8 +151,9 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
                     //Getting mpesa and workflow transaction id and removing key
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
-                    String transactionId = mpesaTxnIdStore.get(mpesaTransactionId);
-                    mpesaTxnIdStore.remove(transactionId);
+                    String transactionId = workflowInstanceStore.get(mpesaTransactionId);
+                    workflowInstanceStore.remove(mpesaTransactionId);
+                    reconciledStore.remove(mpesaTransactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
