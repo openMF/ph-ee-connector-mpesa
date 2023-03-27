@@ -30,7 +30,6 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.CLIENT_CORR
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE_VAL;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.MPESA_TXN_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.RECONCILED;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
@@ -48,8 +47,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final String secondaryIdentifierName = "MSISDN";
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
-
-    HashMap<String, String> store = new HashMap<>();
+    private static HashMap<String, String> mpesaTxnIdStore = new HashMap<>();
 
     @Override
     public void configure() {
@@ -90,14 +88,18 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     JSONObject paybillResponse = new JSONObject(paybillResponseBodyString);
                     logger.debug("Paybill Response Body : {}", paybillResponseBodyString);
                     logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
+
+                    Boolean reconciled = paybillResponse.getBoolean(RECONCILED);
+                    String mpesaTxnId = paybillResponse.getString("transactionId");
+                    String clientCorrelationId = mpesaTxnId;
+                    mpesaTxnIdStore.put(clientCorrelationId, String.valueOf(reconciled));
+
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
                     e.getIn().removeHeaders("*");
                     e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
                     e.getIn().setHeader(AMS_NAME, paybillResponse.getString(AMS_NAME));
                     e.getIn().setHeader(TENANT_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
-                    e.getIn().setHeader(CLIENT_CORRELATION_ID, paybillResponse.getString("transactionId"));
-                    e.getIn().setHeader(RECONCILED, paybillResponse.getBoolean(RECONCILED));
-                    e.getIn().setHeader(MPESA_TXN_ID, paybillResponse.getString("transactionId"));
+                    e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
                     e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
                     e.setProperty("channelUrl", channelUrl);
                     String gsmaTransferDTO = null;
@@ -115,12 +117,12 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String channelResponseBodyString = e.getIn().getBody(String.class);
                     logger.debug("channelResponseBodyString:{}", channelResponseBodyString);
                     JSONObject channelResponse = new JSONObject(channelResponseBodyString);
-                    String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
-                    Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());
+                    String workflowInstanceKey = channelResponse.getString("transactionId");
+
+                    String clientCorrelationId = e.getIn().getHeader(CLIENT_CORRELATION_ID).toString();
+                    Boolean reconciled = Boolean.valueOf(mpesaTxnIdStore.get(clientCorrelationId));
                     // Storing the key value
-                    String value = channelResponse.getString("transactionId");
-                    String key = mpesaTxnId;
-                    store.put(key, value);
+                    mpesaTxnIdStore.put(clientCorrelationId, workflowInstanceKey);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -146,9 +148,10 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
                     ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
-                    //Getting mpesa and workflow transaction id
+                    //Getting mpesa and workflow transaction id and removing key
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
-                    String transactionId = store.get(mpesaTransactionId);
+                    String transactionId = mpesaTxnIdStore.get(mpesaTransactionId);
+                    mpesaTxnIdStore.remove(transactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
