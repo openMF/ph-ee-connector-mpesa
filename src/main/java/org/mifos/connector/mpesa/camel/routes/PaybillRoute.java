@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -47,10 +46,10 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
-    private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
 
+    HashMap<String, String> store = new HashMap<>();
 
     @Override
     public void configure() {
@@ -67,14 +66,16 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
                     String amsUrl = mpesaUtils.getAMSUrl(amsName);
                     String accountHoldingInstitutionId = mpesaPaybillProp.getAccountHoldingInstitutionId();
-
+                    e.getIn().removeHeaders("*");
                     e.getIn().setHeader("amsUrl", amsUrl);
+                    e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
                     e.getIn().setHeader("amsName", amsName);
                     e.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
                     e.setProperty("channelUrl", channelUrl);
                     e.setProperty("secondaryIdentifier", secondaryIdentifierName);
                     e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
                     ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
+                    logger.debug("Header:{}", e.getIn().getHeaders());
                     try {
                         return objectMapper.writeValueAsString(obj);
                     } catch (JsonProcessingException ex) {
@@ -116,10 +117,10 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     JSONObject channelResponse = new JSONObject(channelResponseBodyString);
                     String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
                     Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());
-                    // Storing in redis
+                    // Storing the key value
                     String value = channelResponse.getString("transactionId");
                     String key = mpesaTxnId;
-                    redisTemplate.opsForValue().set(key, value);
+                    store.put(key, value);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -147,7 +148,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
-                    String transactionId = redisTemplate.opsForValue().get(mpesaTransactionId);
+                    String transactionId = store.get(mpesaTransactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);

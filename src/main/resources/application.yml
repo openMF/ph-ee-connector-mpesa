@@ -28,10 +28,6 @@ paygops:
 roster:
   host: "http://localhost:5004"
 
-redis:
-  host: "https://localhost"
-  port: "6379"
-
 operations:
   host: http://ph-ee-operations-app
   base-url: /api/v1/errorcode
@@ -98,7 +94,7 @@ paybill:
     - business-short-code: ${ACCOUNTS_PAYGOPS_PAYBILL_SHORTCODE:24322607}
       ams: "paygops"
       currency: ${ACCOUNTS_PAYGOPS_CURRENCY:KES}
-    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:24322607}
+    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:12345678}
       ams: "roster"
       currency: ${ACCOUNTS_ROSTER_CURRENCY:KES}
 
