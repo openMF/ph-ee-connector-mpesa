@@ -50,7 +50,12 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
+<<<<<<< Updated upstream
 
+=======
+    public static HashMap<String, Boolean> reconciledStore = new HashMap<>();
+    public static HashMap<String, String> workflowInstanceStore = new HashMap<>();
+>>>>>>> Stashed changes
 
     @Override
     public void configure() {
@@ -143,7 +148,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("secondaryIdentifier", "MSISDN");
                     e.setProperty("secondaryIdentifierValue", paybillConfirmationRequestDTO.getMsisdn());
 
-                    ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
+                    ChannelSettlementRequestDTO obj = mpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
@@ -159,7 +164,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
-
+                    logger.info("Hello worker");
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
                                 .messageName("pendingConfirmation")
@@ -167,9 +172,9 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                                 .timeToLive(Duration.ofMillis(300))
                                 .variables(variables)
                                 .send();
-                        logger.debug("Published Variables");
+                        logger.info("Published Variables");
                     } else {
-                        logger.debug("No workflow of such transaction ID exists");
+                        logger.info("No workflow of such transaction ID exists");
                     }
                 });
     }
