@@ -124,6 +124,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     Boolean reconciled = reconciledStore.get(clientCorrelationId);
                     // Storing the key value
                     workflowInstanceStore.put(clientCorrelationId, workflowInstanceKey);
+                    reconciledStore.remove(clientCorrelationId);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -153,7 +154,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
                     String transactionId = workflowInstanceStore.get(mpesaTransactionId);
                     workflowInstanceStore.remove(mpesaTransactionId);
-                    reconciledStore.remove(mpesaTransactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
