@@ -82,7 +82,7 @@ public class MpesaUtils {
     private List<CustomData> setCustomData(JSONObject paybillResponseBodyString) {
         CustomData reconciled = new CustomData();
         reconciled.setKey("partyLookupFailed");
-        reconciled.setValue(Boolean.valueOf(!paybillResponseBodyString.getBoolean("reconciled")));
+        reconciled.setValue(!paybillResponseBodyString.getBoolean("reconciled"));
         CustomData confirmationReceived = new CustomData();
         confirmationReceived.setKey("confirmationReceived");
         confirmationReceived.setValue(false);
