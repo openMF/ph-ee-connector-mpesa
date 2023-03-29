@@ -82,13 +82,17 @@ public class MpesaUtils {
     private List<CustomData> setCustomData(JSONObject paybillResponseBodyString) {
         CustomData reconciled = new CustomData();
         reconciled.setKey("partyLookupFailed");
-        reconciled.setValue(String.valueOf(paybillResponseBodyString.getBoolean("reconciled")));
+        reconciled.setValue(!paybillResponseBodyString.getBoolean("reconciled"));
         CustomData confirmationReceived = new CustomData();
         confirmationReceived.setKey("confirmationReceived");
-        confirmationReceived.setValue(String.valueOf(false));
+        confirmationReceived.setValue(false);
+        CustomData mpesaTxnId = new CustomData();
+        mpesaTxnId.setKey("mpesaTxnId");
+        mpesaTxnId.setValue(paybillResponseBodyString.getString(TRANSACTION_ID));
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
         customData.add(confirmationReceived);
+        customData.add(mpesaTxnId);
         return customData;
     }
 
@@ -98,7 +102,7 @@ public class MpesaUtils {
         return formatter.format(date);
     }
 
-    public static ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName, String currency) {
+    public ChannelSettlementRequestDTO convertPaybillToChannelPayload(PaybillRequestDTO paybillConfirmationRequestDTO, String amsName, String currency) {
         JSONObject payer = new JSONObject();
 
         JSONObject partyIdInfoPayer = new JSONObject();
@@ -121,8 +125,8 @@ public class MpesaUtils {
         JSONObject amount = new JSONObject();
         amount.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
         amount.put("currency", currency);
-
-        return new ChannelSettlementRequestDTO(payer, payee, amount);
+        ChannelSettlementRequestDTO channelSettlementRequestDTO = new ChannelSettlementRequestDTO(payer, payee, amount);
+        return channelSettlementRequestDTO;
     }
 
     public String getAMSUrl(String amsName) {

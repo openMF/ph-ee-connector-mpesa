@@ -20,9 +20,19 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.Map;
 
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.*;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.BUY_GOODS_REQUEST_BODY;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.CORRELATION_ID;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.DEPLOYED_PROCESS;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_CODE;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_DESCRIPTION;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.ERROR_INFORMATION;
+import static org.mifos.connector.mpesa.camel.config.CamelProperties.MPESA_API_RESPONSE;
+import static org.mifos.connector.mpesa.camel.routes.PaybillRoute.workflowInstanceStore;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.SERVER_TRANSACTION_ID;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_FAILED;
 import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSACTION_ID;
-import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.*;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSFER_CREATE_FAILED;
+import static org.mifos.connector.mpesa.zeebe.ZeebeVariables.TRANSFER_RESPONSE_CREATE;
 
 @Component
 public class MpesaWorker {
@@ -68,19 +78,18 @@ public class MpesaWorker {
                     ZeebeUtils.sleep(initTransferWaitTimer);
                     long t2 = System.currentTimeMillis();
                     logger.info("I am awake at " + t2);
-                    logger.info("Time diff " + (t2-t1));
+                    logger.info("Time diff " + (t2 - t1));
 
                     Map<String, Object> variables = job.getVariablesAsMap();
                     mpesaUtils.setProcess(job.getBpmnProcessId());
-                    if(skipMpesa){
+                    if (skipMpesa) {
                         logger.info("Skipping MPESA");
                         Exchange exchange = new DefaultExchange(camelContext);
                         String serverTransactionId = exchange.getProperty(SERVER_TRANSACTION_ID, String.class);
                         variables.put(TRANSACTION_FAILED, false);
                         variables.put(TRANSFER_CREATE_FAILED, false);
                         variables.put(SERVER_TRANSACTION_ID, serverTransactionId);
-                    }
-                    else {
+                    } else {
                         TransactionChannelC2BRequestDTO channelRequest = objectMapper.readValue(
                                 (String) variables.get("mpesaChannelRequest"), TransactionChannelC2BRequestDTO.class);
                         String transactionId = (String) variables.get(TRANSACTION_ID);
@@ -124,6 +133,20 @@ public class MpesaWorker {
                 .maxJobsActive(workerMaxJobs)
                 .open();
 
+        zeebeClient.newWorker()
+                .jobType("delete-workflow-instancekey")
+                .handler(((client, job) -> {
+                    logger.info("Removing Workflow Instance key and Mpesa Txn Id from store");
+                    Map<String, Object> variables = job.getVariablesAsMap();
+                    String mpesaTxnId = variables.get("mpesaTxnId").toString();
+                    logger.debug("Txn Id Removed :{}", mpesaTxnId);
+                    workflowInstanceStore.remove(mpesaTxnId);
+                    client.newCompleteCommand(job.getKey())
+                            .send()
+                            .join();
+                }))
+                .name("Cleanup")
+                .maxJobsActive(workerMaxJobs)
+                .open();
     }
-
 }

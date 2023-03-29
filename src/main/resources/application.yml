@@ -98,7 +98,7 @@ paybill:
     - business-short-code: ${ACCOUNTS_PAYGOPS_PAYBILL_SHORTCODE:24322607}
       ams: "paygops"
       currency: ${ACCOUNTS_PAYGOPS_CURRENCY:KES}
-    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:24322607}
+    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:12345678}
       ams: "roster"
       currency: ${ACCOUNTS_ROSTER_CURRENCY:KES}
 
