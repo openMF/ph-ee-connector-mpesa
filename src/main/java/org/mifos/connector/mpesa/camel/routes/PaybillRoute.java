@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -47,7 +46,6 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     @Autowired
     private MpesaUtils mpesaUtils;
     private final String secondaryIdentifierName = "MSISDN";
-    private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
 
@@ -91,6 +89,12 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     JSONObject paybillResponse = new JSONObject(paybillResponseBodyString);
                     logger.debug("Paybill Response Body : {}", paybillResponseBodyString);
                     logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
+
+                    Boolean reconciled = paybillResponse.getBoolean(RECONCILED);
+                    String mpesaTxnId = paybillResponse.getString("transactionId");
+                    String clientCorrelationId = mpesaTxnId;
+                    reconciledStore.put(clientCorrelationId, reconciled);
+
                     GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
                     e.getIn().removeHeaders("*");
                     e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
@@ -116,12 +120,13 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String channelResponseBodyString = e.getIn().getBody(String.class);
                     logger.debug("channelResponseBodyString:{}", channelResponseBodyString);
                     JSONObject channelResponse = new JSONObject(channelResponseBodyString);
-                    String mpesaTxnId = e.getIn().getHeader("mpesaTxnId").toString();
-                    Boolean reconciled = Boolean.valueOf(e.getIn().getHeader("reconciled").toString());
-                    // Storing in redis
-                    String value = channelResponse.getString("transactionId");
-                    String key = mpesaTxnId;
-                    redisTemplate.opsForValue().set(key, value);
+                    String workflowInstanceKey = channelResponse.getString("transactionId");
+
+                    String clientCorrelationId = e.getIn().getHeader(CLIENT_CORRELATION_ID).toString();
+                    Boolean reconciled = reconciledStore.get(clientCorrelationId);
+                    // Storing the key value
+                    workflowInstanceStore.put(clientCorrelationId, workflowInstanceKey);
+                    reconciledStore.remove(clientCorrelationId);
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -149,7 +154,8 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
                     //Getting mpesa and workflow transaction id
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
-                    String transactionId = redisTemplate.opsForValue().get(mpesaTransactionId);
+                    String transactionId = workflowInstanceStore.get(mpesaTransactionId);
+                    workflowInstanceStore.remove(mpesaTransactionId);
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("confirmationReceived", true);
@@ -161,6 +167,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
+                    
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
                                 .messageName("pendingConfirmation")
