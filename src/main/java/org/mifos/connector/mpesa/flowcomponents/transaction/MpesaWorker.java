@@ -145,7 +145,7 @@ public class MpesaWorker {
                             .send()
                             .join();
                 }))
-                .name("Workflow Instance Key Removal")
+                .name("Cleanup")
                 .maxJobsActive(workerMaxJobs)
                 .open();
     }
