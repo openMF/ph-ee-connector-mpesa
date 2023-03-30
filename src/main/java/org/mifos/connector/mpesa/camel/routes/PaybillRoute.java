@@ -47,8 +47,9 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
     private final String secondaryIdentifierName = "MSISDN";
     @Autowired
     private MpesaPaybillProp mpesaPaybillProp;
-    private static HashMap<String, Boolean> reconciledStore = new HashMap<>();
-    private static HashMap<String, String> workflowInstanceStore = new HashMap<>();
+
+    public static HashMap<String, Boolean> reconciledStore = new HashMap<>();
+    public static HashMap<String, String> workflowInstanceStore = new HashMap<>();
 
     @Override
     public void configure() {
@@ -148,7 +149,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     e.setProperty("secondaryIdentifier", "MSISDN");
                     e.setProperty("secondaryIdentifierValue", paybillConfirmationRequestDTO.getMsisdn());
 
-                    ChannelSettlementRequestDTO obj = MpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
+                    ChannelSettlementRequestDTO obj = mpesaUtils.convertPaybillToChannelPayload(paybillConfirmationRequestDTO, amsName, currency);
                     e.setProperty("CONFIRMATION_REQUEST", obj.toString());
                     //Getting mpesa and workflow transaction id and removing key
                     String mpesaTransactionId = paybillConfirmationRequestDTO.getTransactionID();
@@ -165,7 +166,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
-
+                    
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
                                 .messageName("pendingConfirmation")
