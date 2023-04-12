@@ -5,8 +5,6 @@ camel:
   dataformat:
     json-jackson:
       auto-discover-object-mapper: true
-server:
-  port: 8081
 
 tenant: "oaf"
 
