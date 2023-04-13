@@ -11,6 +11,7 @@ import org.mifos.connector.common.gsma.dto.GsmaTransfer;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
+import org.mifos.connector.mpesa.dto.PaybillResponseDTO;
 import org.mifos.connector.mpesa.utility.MpesaPaybillProp;
 import org.mifos.connector.mpesa.utility.MpesaUtils;
 import org.slf4j.Logger;
@@ -30,7 +31,6 @@ import static org.mifos.connector.mpesa.camel.config.CamelProperties.CLIENT_CORR
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CONTENT_TYPE_VAL;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
-import static org.mifos.connector.mpesa.camel.config.CamelProperties.RECONCILED;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.mpesa.camel.config.CamelProperties.TRANSACTION_ID;
 
@@ -56,55 +56,40 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
 
         from("rest:POST:/validation")
                 .id("mpesa-validation")
-                .unmarshal().json(JsonLibrary.Jackson, PaybillRequestDTO.class)
-                .log(LoggingLevel.INFO, "## Paybill request payload")
-                .setBody(e -> {
-                    PaybillRequestDTO paybillRequestDTO = e.getIn().getBody(PaybillRequestDTO.class);
-                    //Getting the ams name
-                    String businessShortCode = paybillRequestDTO.getShortCode();
-                    String amsName = mpesaPaybillProp.getAMSFromShortCode(businessShortCode);
-                    String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
-                    String amsUrl = mpesaUtils.getAMSUrl(amsName);
-                    String accountHoldingInstitutionId = mpesaPaybillProp.getAccountHoldingInstitutionId();
-                    e.getIn().removeHeaders("*");
-                    e.getIn().setHeader("amsUrl", amsUrl);
-                    e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
-                    e.getIn().setHeader("amsName", amsName);
-                    e.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
-                    e.setProperty("channelUrl", channelUrl);
-                    e.setProperty("secondaryIdentifier", secondaryIdentifierName);
-                    e.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
-                    ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
-                    logger.debug("Header:{}", e.getIn().getHeaders());
-                    try {
-                        return objectMapper.writeValueAsString(obj);
-                    } catch (JsonProcessingException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                })
-                .log("MPESA Request Body : ${body}")
-                .toD("${header.channelUrl}" + "/accounts/validate/${header.secondaryIdentifier}/${header.secondaryIdentifierValue}" + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
-                .log(LoggingLevel.INFO, "Request sent to channel")
-                .setBody(e -> {
-                    String paybillResponseBodyString = e.getIn().getBody(String.class);
-                    JSONObject paybillResponse = new JSONObject(paybillResponseBodyString);
-                    logger.debug("Paybill Response Body : {}", paybillResponseBodyString);
-                    logger.debug("Reconciled : {}", paybillResponse.getBoolean("reconciled"));
+                .log(LoggingLevel.INFO, "## Paybill validation request")
+                .to("direct:account-status")
+                .unmarshal().json(JsonLibrary.Jackson, PaybillResponseDTO.class)
+                .log("${body.isReconciled}")
+                .choice()
+                    .when().simple("${body.isReconciled} == 'true'")
+                        .to("direct:start-paybill-workflow")
+                            .to("direct:paybill-response-success")
+                    .otherwise()
+                        .to("direct:paybill-response-failure")
+                .end();
 
-                    Boolean reconciled = paybillResponse.getBoolean(RECONCILED);
-                    String mpesaTxnId = paybillResponse.getString("transactionId");
+        from("direct:start-paybill-workflow")
+                .id("start-paybill-workflow")
+                .log(LoggingLevel.INFO, "Starting GSMA Txn Workflow for Paybill")
+                .setBody(e -> {
+                    String gsmaTransferDTO = null;
+                    PaybillResponseDTO paybillResponseDTO = e.getIn().getBody(PaybillResponseDTO.class);
+                    logger.debug("Paybill Response :{}", paybillResponseDTO.toString());
+                    logger.debug("Reconciled : {}", paybillResponseDTO.isReconciled());
+
+                    Boolean reconciled = paybillResponseDTO.isReconciled();
+                    String mpesaTxnId = paybillResponseDTO.getTransactionId();
                     String clientCorrelationId = mpesaTxnId;
                     reconciledStore.put(clientCorrelationId, reconciled);
 
-                    GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponse);
+                    GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponseDTO);
                     e.getIn().removeHeaders("*");
-                    e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
-                    e.getIn().setHeader(AMS_NAME, paybillResponse.getString(AMS_NAME));
-                    e.getIn().setHeader(TENANT_ID, paybillResponse.getString(ACCOUNT_HOLDING_INSTITUTION_ID));
+                    e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponseDTO.getAccountHoldingInstitutionId());
+                    e.getIn().setHeader(AMS_NAME, paybillResponseDTO.getAmsName());
+                    e.getIn().setHeader(TENANT_ID, paybillResponseDTO.getAccountHoldingInstitutionId());
                     e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
                     e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
                     e.setProperty("channelUrl", channelUrl);
-                    String gsmaTransferDTO = null;
                     try {
                         gsmaTransferDTO = objectMapper.writeValueAsString(gsmaTransfer);
                     } catch (JsonProcessingException ex) {
@@ -114,6 +99,42 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                 })
                 .toD("${header.channelUrl}" + "/channel/gsma/transaction" + "?bridgeEndpoint=true&throwExceptionOnFailure=false" +
                         "&headerFilterStrategy=#" + CUSTOM_HEADER_FILTER_STRATEGY)
+                .log(LoggingLevel.INFO, "Starting GSMA Txn Workflow in channel");
+
+        from("direct:account-status")
+                .id("account-status-channel")
+                .unmarshal().json(JsonLibrary.Jackson, PaybillRequestDTO.class)
+                .log(LoggingLevel.INFO, "Paybill Validation Payload")
+                .setBody(exchange -> {
+                    PaybillRequestDTO paybillRequestDTO = exchange.getIn().getBody(PaybillRequestDTO.class);
+                    //Getting the ams name
+                    String businessShortCode = paybillRequestDTO.getShortCode();
+                    String amsName = mpesaPaybillProp.getAMSFromShortCode(businessShortCode);
+                    String currency = mpesaPaybillProp.getCurrencyFromShortCode(businessShortCode);
+                    String amsUrl = mpesaUtils.getAMSUrl(amsName);
+                    String accountHoldingInstitutionId = mpesaPaybillProp.getAccountHoldingInstitutionId();
+                    exchange.getIn().removeHeaders("*");
+                    exchange.getIn().setHeader("amsUrl", amsUrl);
+                    exchange.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
+                    exchange.getIn().setHeader("amsName", amsName);
+                    exchange.getIn().setHeader("accountHoldingInstitutionId", accountHoldingInstitutionId);
+                    exchange.setProperty("channelUrl", channelUrl);
+                    exchange.setProperty("secondaryIdentifier", secondaryIdentifierName);
+                    exchange.setProperty("secondaryIdentifierValue", paybillRequestDTO.getMsisdn());
+                    ChannelRequestDTO obj = MpesaUtils.convertPaybillPayloadToChannelPayload(paybillRequestDTO, amsName, currency);
+                    logger.debug("Header:{}", exchange.getIn().getHeaders());
+                    try {
+                        return objectMapper.writeValueAsString(obj);
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                })
+                .toD("${header.channelUrl}" + "/accounts/validate/${header.secondaryIdentifier}/${header.secondaryIdentifierValue}" + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .log(LoggingLevel.INFO, "Account Status request sent to channel");
+
+        from("direct:paybill-response-success")
+                .id("paybill-response-success")
+                .log(LoggingLevel.INFO, "Sending paybill response")
                 .process(e -> {
                     // Setting mpesa specifc response
                     String channelResponseBodyString = e.getIn().getBody(String.class);
@@ -126,6 +147,20 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     // Storing the key value
                     workflowInstanceStore.put(clientCorrelationId, workflowInstanceKey);
                     reconciledStore.remove(clientCorrelationId);
+                    JSONObject responseObject = new JSONObject();
+                    responseObject.put("ResultCode", reconciled ? 0 : 1);
+                    responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
+                    e.getIn().setBody(responseObject.toString());
+                });
+
+        from("direct:paybill-response-failure")
+                .id("paybill-response-failure")
+                .log(LoggingLevel.INFO, "Sending paybill response")
+                .process(e -> {
+                    // Setting mpesa specifc response
+                    String channelResponseBodyString = e.getIn().getBody(String.class);
+                    logger.debug("channelResponseBodyString:{}", channelResponseBodyString);
+                    Boolean reconciled = false;
                     JSONObject responseObject = new JSONObject();
                     responseObject.put("ResultCode", reconciled ? 0 : 1);
                     responseObject.put("ResultDesc", reconciled ? "Accepted" : "Rejected");
@@ -166,7 +201,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
-                    
+
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
                                 .messageName("pendingConfirmation")

@@ -7,6 +7,7 @@ import org.mifos.connector.common.gsma.dto.Party;
 import org.mifos.connector.mpesa.dto.ChannelRequestDTO;
 import org.mifos.connector.mpesa.dto.ChannelSettlementRequestDTO;
 import org.mifos.connector.mpesa.dto.PaybillRequestDTO;
+import org.mifos.connector.mpesa.dto.PaybillResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,20 +48,20 @@ public class MpesaUtils {
         roster;
     }
 
-    public GsmaTransfer createGsmaTransferDTO(JSONObject paybillResponseBodyString) {
+    public GsmaTransfer createGsmaTransferDTO(PaybillResponseDTO paybillResponseDTO) {
         GsmaTransfer gsmaTransfer = new GsmaTransfer();
 
-        List<CustomData> customData = setCustomData(paybillResponseBodyString);
+        List<CustomData> customData = setCustomData(paybillResponseDTO);
         String currentDateTime = getCurrentDateTime();
 
         Party payer = new Party();
-        payer.setPartyIdIdentifier(paybillResponseBodyString.getString("msisdn"));
+        payer.setPartyIdIdentifier(paybillResponseDTO.getMsisdn());
         payer.setPartyIdType("MSISDN");
         List<Party> payerObj = new ArrayList<>();
         payerObj.add(payer);
 
         Party payee = new Party();
-        payee.setPartyIdIdentifier(paybillResponseBodyString.getString("msisdn"));
+        payee.setPartyIdIdentifier(paybillResponseDTO.getMsisdn());
         payee.setPartyIdType("accountId");
         List<Party> payeeObj = new ArrayList<>();
         payeeObj.add(payee);
@@ -72,23 +73,23 @@ public class MpesaUtils {
         gsmaTransfer.setSubType("inbound");
         gsmaTransfer.setType("transfer");
         gsmaTransfer.setDescriptionText("description");
-        gsmaTransfer.setRequestingOrganisationTransactionReference(paybillResponseBodyString.getString("transactionId"));
-        gsmaTransfer.setAmount(paybillResponseBodyString.getString("amount"));
-        gsmaTransfer.setCurrency(paybillResponseBodyString.getString("currency"));
+        gsmaTransfer.setRequestingOrganisationTransactionReference(paybillResponseDTO.getTransactionId());
+        gsmaTransfer.setAmount(paybillResponseDTO.getAmount());
+        gsmaTransfer.setCurrency(paybillResponseDTO.getCurrency());
 
         return gsmaTransfer;
     }
 
-    private List<CustomData> setCustomData(JSONObject paybillResponseBodyString) {
+    private List<CustomData> setCustomData(PaybillResponseDTO paybillResponseDTO) {
         CustomData reconciled = new CustomData();
         reconciled.setKey("partyLookupFailed");
-        reconciled.setValue(!paybillResponseBodyString.getBoolean("reconciled"));
+        reconciled.setValue(!paybillResponseDTO.isReconciled());
         CustomData confirmationReceived = new CustomData();
         confirmationReceived.setKey("confirmationReceived");
         confirmationReceived.setValue(false);
         CustomData mpesaTxnId = new CustomData();
         mpesaTxnId.setKey("mpesaTxnId");
-        mpesaTxnId.setValue(paybillResponseBodyString.getString(TRANSACTION_ID));
+        mpesaTxnId.setValue(paybillResponseDTO.getTransactionId());
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
         customData.add(confirmationReceived);
