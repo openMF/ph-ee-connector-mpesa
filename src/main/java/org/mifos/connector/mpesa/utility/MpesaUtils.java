@@ -48,10 +48,10 @@ public class MpesaUtils {
         roster;
     }
 
-    public GsmaTransfer createGsmaTransferDTO(PaybillResponseDTO paybillResponseDTO) {
+    public GsmaTransfer createGsmaTransferDTO(PaybillResponseDTO paybillResponseDTO, String clientCorrelationId) {
         GsmaTransfer gsmaTransfer = new GsmaTransfer();
 
-        List<CustomData> customData = setCustomData(paybillResponseDTO);
+        List<CustomData> customData = setCustomData(paybillResponseDTO,clientCorrelationId);
         String currentDateTime = getCurrentDateTime();
 
         Party payer = new Party();
@@ -80,7 +80,7 @@ public class MpesaUtils {
         return gsmaTransfer;
     }
 
-    private List<CustomData> setCustomData(PaybillResponseDTO paybillResponseDTO) {
+    private List<CustomData> setCustomData(PaybillResponseDTO paybillResponseDTO, String clientCorrelationId) {
         CustomData reconciled = new CustomData();
         reconciled.setKey("partyLookupFailed");
         reconciled.setValue(!paybillResponseDTO.isReconciled());
@@ -90,10 +90,23 @@ public class MpesaUtils {
         CustomData mpesaTxnId = new CustomData();
         mpesaTxnId.setKey("mpesaTxnId");
         mpesaTxnId.setValue(paybillResponseDTO.getTransactionId());
+        CustomData ams = new CustomData();
+        ams.setKey("ams");
+        ams.setValue(paybillResponseDTO.getAmsName());
+        CustomData tenantId=new CustomData();
+        tenantId.setKey("tenantId");
+        tenantId.setKey(paybillResponseDTO.getAccountHoldingInstitutionId());
+        CustomData clientCorrelation=new CustomData();
+        clientCorrelation.setKey("clientCorrelationId");
+        clientCorrelation.setValue(clientCorrelationId);
+
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
         customData.add(confirmationReceived);
         customData.add(mpesaTxnId);
+        customData.add(ams);
+        customData.add(tenantId);
+        customData.add(clientCorrelation);
         return customData;
     }
 
