@@ -199,6 +199,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     variables.put("phoneNumber", paybillConfirmationRequestDTO.getMsisdn());
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
+                    logger.info("Workflow transaction id : {}", transactionId);
 
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
