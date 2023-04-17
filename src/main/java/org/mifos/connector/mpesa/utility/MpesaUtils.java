@@ -99,6 +99,9 @@ public class MpesaUtils {
         CustomData clientCorrelation=new CustomData();
         clientCorrelation.setKey("clientCorrelationId");
         clientCorrelation.setValue(clientCorrelationId);
+        CustomData currency = new CustomData();
+        ams.setKey("currency");
+        ams.setValue(paybillResponseDTO.getCurrency());
 
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
@@ -107,6 +110,7 @@ public class MpesaUtils {
         customData.add(ams);
         customData.add(tenantId);
         customData.add(clientCorrelation);
+        customData.add(currency);
         return customData;
     }
 
