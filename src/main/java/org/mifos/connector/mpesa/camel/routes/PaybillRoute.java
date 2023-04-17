@@ -195,7 +195,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     variables.put(CHANNEL_REQUEST, obj.toString());
                     variables.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
                     variables.put("accountId", paybillConfirmationRequestDTO.getBillRefNo());
-                    variables.put("originDate", paybillConfirmationRequestDTO.getTransactionTime());
+                    variables.put("originDate", Long.parseLong(paybillConfirmationRequestDTO.getTransactionTime()));
                     variables.put("phoneNumber", paybillConfirmationRequestDTO.getMsisdn());
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
