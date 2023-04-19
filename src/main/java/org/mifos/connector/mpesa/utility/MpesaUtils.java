@@ -95,13 +95,13 @@ public class MpesaUtils {
         ams.setValue(paybillResponseDTO.getAmsName());
         CustomData tenantId=new CustomData();
         tenantId.setKey("tenantId");
-        tenantId.setKey(paybillResponseDTO.getAccountHoldingInstitutionId());
+        tenantId.setValue(paybillResponseDTO.getAccountHoldingInstitutionId());
         CustomData clientCorrelation=new CustomData();
         clientCorrelation.setKey("clientCorrelationId");
         clientCorrelation.setValue(clientCorrelationId);
         CustomData currency = new CustomData();
-        ams.setKey("currency");
-        ams.setValue(paybillResponseDTO.getCurrency());
+        currency.setKey("currency");
+        currency.setValue(paybillResponseDTO.getCurrency());
 
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
