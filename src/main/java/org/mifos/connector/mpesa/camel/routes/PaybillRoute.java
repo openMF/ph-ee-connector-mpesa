@@ -81,8 +81,7 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     String mpesaTxnId = paybillResponseDTO.getTransactionId();
                     String clientCorrelationId = mpesaTxnId;
                     reconciledStore.put(clientCorrelationId, reconciled);
-
-                    GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponseDTO);
+                    GsmaTransfer gsmaTransfer = mpesaUtils.createGsmaTransferDTO(paybillResponseDTO,clientCorrelationId);
                     e.getIn().removeHeaders("*");
                     e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, paybillResponseDTO.getAccountHoldingInstitutionId());
                     e.getIn().setHeader(AMS_NAME, paybillResponseDTO.getAmsName());
@@ -196,11 +195,11 @@ public class PaybillRoute extends ErrorHandlerRouteBuilder {
                     variables.put(CHANNEL_REQUEST, obj.toString());
                     variables.put("amount", paybillConfirmationRequestDTO.getTransactionAmount());
                     variables.put("accountId", paybillConfirmationRequestDTO.getBillRefNo());
-                    variables.put("originDate", paybillConfirmationRequestDTO.getTransactionTime());
+                    variables.put("originDate", Long.parseLong(paybillConfirmationRequestDTO.getTransactionTime()));
                     variables.put("phoneNumber", paybillConfirmationRequestDTO.getMsisdn());
-                    logger.info("Workflow transaction id : {}", transactionId);
                     variables.put("mpesaTransactionId", mpesaTransactionId);
                     variables.put(TRANSACTION_ID, transactionId);
+                    logger.info("Workflow transaction id : {}", transactionId);
 
                     if (transactionId != null) {
                         zeebeClient.newPublishMessageCommand()
