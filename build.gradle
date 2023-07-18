@@ -14,7 +14,7 @@ repositories {
         url = uri('https://repo.maven.apache.org/maven2')
     }
     maven {
-        url = uri('https://fynarfin.jfrog.io/artifactory/fyn-libs-snapshot/')
+        url = uri('https://jfrog.sandbox.fynarfin.io/artifactory/fyn-libs-snapshot')
     }
     jcenter()
 }
