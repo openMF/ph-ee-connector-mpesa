@@ -34,7 +34,7 @@ dependencies {
     implementation 'org.json:json:20211205'
     implementation 'io.camunda:zeebe-client-java:8.1.1'
     implementation 'com.auth0:java-jwt:3.18.3'
-    implementation 'org.mifos:ph-ee-connector-common:1.2.3-SNAPSHOT'
+    implementation 'org.mifos:ph-ee-connector-common:1.5.1-SNAPSHOT'
     implementation 'com.google.api-client:google-api-client:1.32.2'
     implementation 'org.projectlombok:lombok:1.18.22'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
@@ -45,7 +45,7 @@ dependencies {
 
 group = 'org.mifos'
 version = '1.0.0-SNAPSHOT'
-sourceCompatibility = '1.8'
+sourceCompatibility = '11'
 
 publishing {
     publications {
