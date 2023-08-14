@@ -4,7 +4,7 @@
 # RUN ./gradlew --no-daemon -q -x bootJar
 # WORKDIR /mpesa/build/libs
 
-FROM openjdk:17 as mpesa
+FROM openjdk:13 as mpesa
 
 # COPY --from=builder /mpesa/build/libs/*.jar ph-ee-connector-mpesa-1.0.0-SNAPSHOT.jar
 
