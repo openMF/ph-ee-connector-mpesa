@@ -6,7 +6,8 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'eclipse'
-    id 'org.springframework.boot' version '2.6.2'
+    id 'org.springframework.boot' version '3.4.4'
+    id 'io.spring.dependency-management' version '1.1.6'
 }
 
 repositories {
@@ -16,36 +17,53 @@ repositories {
     maven {
         url = uri('https://jfrog.sandbox.fynarfin.io/artifactory/fyn-libs-snapshot')
     }
-    jcenter()
+
+    // Mifos Platform BOM + ph-ee-connector-common 2.0.0-SNAPSHOT are consumed
+    // from the local JFrog Artifactory sandbox (Docker Compose in
+    // proposal/local-jfrog/). Swap this host for the production Mifos JFrog
+    // when the official BOM is ready.
+    maven {
+        name = 'LocalJFrog'
+        url = uri('http://localhost:8081/artifactory/mifos-platform-snapshot')
+        allowInsecureProtocol = true
+        credentials {
+            username = findProperty('localJfrog.user') ?: System.getenv('LOCAL_JFROG_USER')
+            password = findProperty('localJfrog.key') ?: System.getenv('LOCAL_JFROG_KEY')
+        }
+    }
 }
 
 dependencies {
+    // Mifos Platform BOM pins Spring Boot 3.4, Camel 4, Zeebe 8, Jakarta EE 10
+    // and every other shared library version. Do NOT hardcode managed versions.
+    // This is a deployable application (leaf node), so use enforcedPlatform().
+    implementation enforcedPlatform('org.mifos.platform:mifos-platform-bom:1.0.0-SNAPSHOT')
 
-    implementation 'io.netty:netty-bom:4.1.72.Final'
-    implementation 'org.apache.camel.springboot:camel-spring-boot-starter:3.12.0'
-    implementation('org.springframework.boot:spring-boot-starter-web:2.6.2')
-    implementation('org.springframework.boot:spring-boot-starter-actuator:2.6.2')
-    implementation 'org.apache.camel:camel-endpointdsl:3.12.0'
-    implementation 'org.apache.camel:camel-jetty:3.12.0'
-    implementation 'org.apache.camel:camel-undertow:3.12.0'
-    implementation 'org.apache.camel:camel-http:3.12.0'
-    implementation 'org.apache.camel.springboot:camel-jackson-starter:3.12.0'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1'
-    implementation 'org.json:json:20211205'
-    implementation 'io.camunda:zeebe-client-java:8.1.1'
-    implementation 'com.auth0:java-jwt:3.18.3'
-    implementation 'org.mifos:ph-ee-connector-common:1.5.1-SNAPSHOT'
+    implementation 'org.apache.camel.springboot:camel-spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.apache.camel:camel-endpointdsl'
+    implementation 'org.apache.camel:camel-jetty'
+    implementation 'org.apache.camel:camel-undertow'
+    implementation 'org.apache.camel:camel-http'
+    implementation 'org.apache.camel.springboot:camel-jackson-starter'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'org.json:json'
+    implementation 'io.camunda:zeebe-client-java'
+    implementation 'com.auth0:java-jwt'
+    implementation 'org.mifos:ph-ee-connector-common:2.0.0-SNAPSHOT'
     implementation 'com.google.api-client:google-api-client:1.32.2'
-    implementation 'org.projectlombok:lombok:1.18.22'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test:2.6.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
 }
 
 group = 'org.mifos'
 version = '1.0.0-SNAPSHOT'
-sourceCompatibility = '11'
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications {

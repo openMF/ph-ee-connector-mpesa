@@ -4,7 +4,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.mifos.connector.common.gsma.dto.AccessTokenDTO;
 import org.mifos.connector.mpesa.utility.ConnectionUtils;
 import org.mifos.connector.mpesa.utility.MpesaProps;
 import org.mifos.connector.mpesa.utility.MpesaUtils;
@@ -58,10 +57,10 @@ public class AuthRoutes extends RouteBuilder {
          */
         from("direct:access-token-save")
                 .id("access-token-save")
-                .unmarshal().json(JsonLibrary.Jackson, AccessTokenDTO.class)
+                .unmarshal().json(JsonLibrary.Jackson, AccessTokenResponseDTO.class)
                 .process(exchange -> {
-                    accessTokenStore.setAccessToken(exchange.getIn().getBody(AccessTokenDTO.class).getAccess_token());
-                    accessTokenStore.setExpiresOn(exchange.getIn().getBody(AccessTokenDTO.class).getExpires_in());
+                    accessTokenStore.setAccessToken(exchange.getIn().getBody(AccessTokenResponseDTO.class).getAccessToken());
+                    accessTokenStore.setExpiresOn(exchange.getIn().getBody(AccessTokenResponseDTO.class).getExpiresIn());
                     logger.info("Saved Access Token: " + accessTokenStore.getAccessToken());
                 });
 
