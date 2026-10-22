@@ -1,5 +1,5 @@
 camel:
-  server-port: 5000
+  server-port: 5001
   springboot:
     main-run-controller: true
   dataformat:
@@ -114,3 +114,5 @@ skip:
 logging:
   level:
     root: INFO
+new:
+  changes: "mpesa"
